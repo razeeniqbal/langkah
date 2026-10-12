@@ -23,6 +23,8 @@ app = FastAPI(title="Workbench", version="1.0.0", lifespan=lifespan)
 @app.middleware("http")
 async def require_login(request: Request, call_next):
     path = request.url.path
+    if auth.MISCONFIGURED and path.startswith("/api/"):
+        return JSONResponse({"detail": "Set WORKBENCH_PASSWORD in the Vercel project settings, then redeploy."}, status_code=503)
     if path.startswith("/api/") and not path.startswith("/api/auth/") and not auth.is_authed(request):
         return JSONResponse({"detail": "login required"}, status_code=401)
     return await call_next(request)

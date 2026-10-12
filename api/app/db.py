@@ -10,9 +10,21 @@ from collections.abc import Iterator
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import NullPool
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./workbench.db")
+
+def _database_url() -> str:
+    # Vercel's Neon integration sets DATABASE_URL or POSTGRES_URL as postgres://...
+    url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or "sqlite:///./workbench.db"
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
+DATABASE_URL = _database_url()
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
+SERVERLESS = bool(os.environ.get("VERCEL"))
 SCHEMA = None if IS_SQLITE else os.environ.get("DB_SCHEMA", "workbench")
 P = f"{SCHEMA}." if SCHEMA else ""  # table prefix for raw SQL
 
@@ -20,6 +32,8 @@ engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False} if IS_SQLITE else {},
     pool_pre_ping=not IS_SQLITE,
+    # Serverless instances freeze between requests; don't hold idle connections.
+    **({"poolclass": NullPool} if SERVERLESS and not IS_SQLITE else {}),
 )
 
 if IS_SQLITE:
@@ -90,9 +104,11 @@ def init_db() -> None:
     from .models import Base
 
     with engine.begin() as conn:
+        if not IS_SQLITE:
+            # Several cold-starting instances may run this at once.
+            conn.execute(text("SELECT pg_advisory_xact_lock(724501)"))
         if SCHEMA:
             conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}"))
         conn.execute(text(f"DROP VIEW IF EXISTS {P}plan_item_progress"))
-    Base.metadata.create_all(engine)
-    with engine.begin() as conn:
+        Base.metadata.create_all(conn)
         conn.execute(text(progress_view_sql()))

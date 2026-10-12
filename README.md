@@ -44,6 +44,20 @@ tailscale serve --bg 8080
 
 Set `WORKBENCH_PASSWORD` in `.env` if you also want a login screen; leave it empty to rely on Tailscale alone.
 
+## Deploy to Vercel
+
+`vercel.json` defines two services: `web/` (Vite) at `/` and `api/` (FastAPI) at `/api`.
+
+1. Import the repo in Vercel with the **Services** preset and root `./`.
+2. Storage tab → add a **Neon Postgres** database and connect it to the project (it sets `DATABASE_URL`).
+3. Settings → Environment Variables: set `WORKBENCH_PASSWORD` and a long random `WORKBENCH_SECRET`. The API refuses to serve data on Vercel without a password.
+4. Redeploy. Load data from your machine against the same database:
+
+```bash
+cd api
+DATABASE_URL="<Neon connection string>" python -m app.seed import ../data/dic.json
+```
+
 ## Load data
 
 Demo data (only into an empty database):
