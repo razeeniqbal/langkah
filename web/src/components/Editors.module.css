@@ -1,0 +1,69 @@
+.overlay {
+  position: fixed; inset: 0; z-index: 40;
+  background: var(--overlay);
+  display: flex; justify-content: flex-end;
+  animation: fade 160ms ease-out;
+}
+@keyframes fade { from { opacity: 0; } }
+.panel {
+  width: min(480px, 100vw); height: 100%;
+  background: var(--bg);
+  border-left: 1px solid var(--ink);
+  animation: slide 220ms var(--ease-out);
+}
+@keyframes slide { from { transform: translateX(24px); opacity: 0.4; } }
+
+.form { display: flex; flex-direction: column; height: 100%; }
+.head {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--ink);
+  background: var(--surface);
+}
+.head > div:first-child { flex: 1; min-width: 0; }
+.head h2 { margin: 2px 0 0; font-size: 18px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+.foot {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  padding: 10px 16px; border-top: 1px solid var(--ink); background: var(--surface);
+}
+.spacer { flex: 1; }
+.error { color: var(--danger); font-size: 13px; }
+
+.titleInput { height: 36px; font-size: 16px; font-weight: 500; }
+.code { width: 90px; font-family: var(--font-mono); letter-spacing: 0.1em; font-weight: 600; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wide { display: flex; width: 100%; }
+.wide > button { flex: 1; padding: 0 4px; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.check input { accent-color: var(--accent); width: 15px; height: 15px; }
+.range { width: 100%; accent-color: var(--accent); }
+.hint { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.progress {
+  display: flex; align-items: center; gap: 16px; padding: 10px 12px;
+  border: 1px solid var(--ink); background: var(--surface);
+}
+.progress > div { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.progress strong { font-size: 24px; font-weight: 600; color: var(--accent); }
+
+.cards { border: 1px solid var(--line); background: var(--surface); }
+.cardsHead { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 4px 10px; border-bottom: 1px solid var(--line); }
+.cardRow {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 6px 10px; border: 0; border-bottom: 1px solid var(--line-2); background: none; text-align: left;
+  font-size: 12px;
+}
+.cardRow:hover { background: var(--surface-2); }
+.cardTitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.status { width: 78px; flex: none; font-size: 9.5px; color: var(--ink-2); }
+.status[data-status='doing'], .status[data-status='review'] { color: var(--accent); }
+.status[data-status='done'] { color: var(--ink); font-weight: 600; }
+.lateText { color: var(--danger); font-weight: 600; }
+.addCard { display: flex; gap: 6px; padding: 8px; }
+.addCard .input { height: 28px; }
+
+@media (max-width: 720px) {
+  .cols { grid-template-columns: 1fr; }
+  .wide > button { font-size: 9.5px; letter-spacing: 0.02em; }
+}
