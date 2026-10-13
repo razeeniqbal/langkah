@@ -1,3 +1,4 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -7,13 +8,32 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import auth
-from .db import init_db
+from .db import MISSING_DATABASE_URL, init_db
 from .routes import router
+
+log = logging.getLogger("workbench")
+
+# Set when the schema could not be created; /api answers 503 with it instead of
+# the whole function crashing at startup.
+db_error: str | None = None
+
+
+def try_init_db() -> None:
+    global db_error
+    if MISSING_DATABASE_URL:
+        db_error = "Set DATABASE_URL in the Vercel project settings, then redeploy."
+        return
+    try:
+        init_db()
+        db_error = None
+    except Exception:
+        log.exception("database setup failed")
+        db_error = "Cannot connect to the database. Check DATABASE_URL; the full error is in the Vercel function logs."
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    init_db()
+    try_init_db()
     yield
 
 
@@ -25,6 +45,10 @@ async def require_login(request: Request, call_next):
     path = request.url.path
     if auth.MISCONFIGURED and path.startswith("/api/"):
         return JSONResponse({"detail": "Set WORKBENCH_PASSWORD in the Vercel project settings, then redeploy."}, status_code=503)
+    if db_error and path.startswith("/api/"):
+        try_init_db()  # the database may be reachable now
+        if db_error:
+            return JSONResponse({"detail": db_error}, status_code=503)
     if path.startswith("/api/") and not path.startswith("/api/auth/") and not auth.is_authed(request):
         return JSONResponse({"detail": "login required"}, status_code=401)
     return await call_next(request)

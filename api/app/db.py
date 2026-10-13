@@ -25,6 +25,8 @@ def _database_url() -> str:
 DATABASE_URL = _database_url()
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 SERVERLESS = bool(os.environ.get("VERCEL"))
+# Vercel's filesystem is read-only, so the SQLite fallback can't work there.
+MISSING_DATABASE_URL = SERVERLESS and IS_SQLITE
 SCHEMA = None if IS_SQLITE else os.environ.get("DB_SCHEMA", "workbench")
 P = f"{SCHEMA}." if SCHEMA else ""  # table prefix for raw SQL
 
@@ -32,7 +34,8 @@ engine = create_engine(
     DATABASE_URL,
     # Poolers in transaction mode (Supabase :6543, Neon -pooler) can't keep
     # server-side prepared statements, so psycopg must not create them.
-    connect_args={"check_same_thread": False} if IS_SQLITE else {"prepare_threshold": None},
+    # A bad host must fail fast rather than hang until the function times out.
+    connect_args={"check_same_thread": False} if IS_SQLITE else {"prepare_threshold": None, "connect_timeout": 10},
     pool_pre_ping=not IS_SQLITE,
     # Serverless instances freeze between requests; don't hold idle connections.
     **({"poolclass": NullPool} if SERVERLESS and not IS_SQLITE else {}),
