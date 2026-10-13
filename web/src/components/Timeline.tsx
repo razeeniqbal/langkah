@@ -11,6 +11,31 @@ import s from './Timeline.module.css'
 const PPD: Record<Zoom, number> = { week: 30, month: 9, quarter: 3 } // pixels per day
 const PAD: Record<Zoom, number> = { week: 10, month: 28, quarter: 60 } // days either side
 const HEAD = 44
+const LEFT_MIN = 200, LEFT_MAX = 900
+const SCALE_MIN = 0.1, SCALE_MAX = 5
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
+
+// Follows one pointer drag on window until release.
+function track(e: React.PointerEvent, cursor: string, onMove: (dx: number) => void) {
+  if (e.button !== 0) return
+  e.preventDefault()
+  e.stopPropagation()
+  const x0 = e.clientX
+  const body = document.body.style
+  body.cursor = cursor
+  body.userSelect = 'none'
+  const move = (ev: PointerEvent) => onMove(ev.clientX - x0)
+  const end = () => {
+    body.cursor = ''
+    body.userSelect = ''
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', end)
+    window.removeEventListener('pointercancel', end)
+  }
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', end)
+  window.addEventListener('pointercancel', end)
+}
 
 type Row =
   | { kind: 'project'; key: string; project: Project; items: PlanItem[] }
@@ -45,11 +70,13 @@ function useNarrow() {
 
 export function Timeline({ d }: { d: Data }) {
   const ui = useUI()
-  const { zoom, sheet, collapsed } = ui
-  const ppd = PPD[zoom]
+  const { zoom, sheet, collapsed, leftWidth } = ui
+  const scale = ui.timeScale?.[zoom] ?? 1
+  const ppd = PPD[zoom] * scale
   const ROW = sheet ? 26 : 34
   const narrow = useNarrow()
-  const LEFT = narrow ? 150 : 340
+  const LEFT = narrow ? 150 : leftWidth
+  const leftRef = useRef<HTMLDivElement>(null)
   const update = useUpdateItem()
   const scroller = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<Drag | null>(null)
@@ -107,6 +134,88 @@ export function Timeline({ d }: { d: Data }) {
     if (el && prevD0.current !== d0) el.scrollLeft += (prevD0.current - d0) * ppd
     prevD0.current = d0
   }, [d0, ppd])
+
+  // Timeline scale: keep the anchored date at the same screen position after re-render.
+  const anchor = useRef<{ day: number; px: number } | null>(null)
+  useLayoutEffect(() => {
+    const el = scroller.current, a = anchor.current
+    if (el && a) el.scrollLeft = Math.max(0, (a.day - d0) * ppd - a.px)
+    anchor.current = null
+  }, [ppd, d0])
+
+  // Rescale around a screen x (default: middle of the chart viewport).
+  const setScale = useCallback((next: number, clientX?: number) => {
+    const el = scroller.current
+    if (el) {
+      const r = el.getBoundingClientRect()
+      const px = Math.max(0, clientX === undefined ? (el.clientWidth - LEFT) / 2 : clientX - r.left - LEFT)
+      anchor.current = { day: d0 + (el.scrollLeft + px) / ppd, px }
+    }
+    useUI.getState().setTimeScale(zoom, clamp(next, SCALE_MIN, SCALE_MAX))
+  }, [d0, ppd, LEFT, zoom])
+
+  const fitAll = useCallback(() => {
+    const el = scroller.current
+    if (!el) return
+    const avail = el.clientWidth - LEFT - 12
+    anchor.current = { day: d0, px: 0 }
+    useUI.getState().setTimeScale(zoom, clamp(avail / ((d1 - d0 + 1) * PPD[zoom]), SCALE_MIN, SCALE_MAX))
+  }, [LEFT, d0, d1, zoom])
+
+  // Ctrl / Cmd + wheel zooms the timeline around the pointer.
+  const setScaleRef = useRef(setScale)
+  setScaleRef.current = setScale
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    const on = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return
+      e.preventDefault()
+      const st = useUI.getState()
+      setScaleRef.current((st.timeScale?.[st.zoom] ?? 1) * Math.exp(-e.deltaY * 0.0025), e.clientX)
+    }
+    el.addEventListener('wheel', on, { passive: false })
+    return () => el.removeEventListener('wheel', on)
+  }, [])
+
+  // Drag the date header to stretch / compress around the grabbed date.
+  const beginStretch = (e: React.PointerEvent) => {
+    const el = scroller.current
+    if (!el) return
+    const px = Math.max(0, e.clientX - el.getBoundingClientRect().left - LEFT)
+    const day = d0 + (el.scrollLeft + px) / ppd
+    const s0 = scale
+    track(e, 'ew-resize', (dx) => {
+      anchor.current = { day, px }
+      useUI.getState().setTimeScale(zoom, clamp(s0 * Math.exp(dx / 180), SCALE_MIN, SCALE_MAX))
+    })
+  }
+
+  // Drag the column edge to resize "Plan item"; double-click fits the longest name.
+  const beginResize = (e: React.PointerEvent) => {
+    const w0 = leftWidth
+    track(e, 'col-resize', (dx) => useUI.getState().set({ leftWidth: clamp(w0 + dx, LEFT_MIN, LEFT_MAX) }))
+  }
+  const fitNames = () => {
+    let need = 0
+    leftRef.current?.querySelectorAll<HTMLElement>('[data-clip]').forEach((el) => {
+      need = Math.max(need, el.scrollWidth - el.clientWidth)
+    })
+    ui.set({ leftWidth: clamp(need > 0 ? leftWidth + need + 8 : 340, LEFT_MIN, LEFT_MAX) })
+  }
+  const resizeKeys = (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 64 : 16
+    if (e.key === 'ArrowLeft') ui.set({ leftWidth: clamp(leftWidth - step, LEFT_MIN, LEFT_MAX) })
+    else if (e.key === 'ArrowRight') ui.set({ leftWidth: clamp(leftWidth + step, LEFT_MIN, LEFT_MAX) })
+    else return
+    e.preventDefault()
+  }
+  const handle = !narrow && (
+    <div className={s.colHandle} role="separator" aria-orientation="vertical" aria-label="Resize plan item column"
+      aria-valuenow={leftWidth} aria-valuemin={LEFT_MIN} aria-valuemax={LEFT_MAX} tabIndex={0}
+      title="Drag to resize · double-click to fit names"
+      onPointerDown={beginResize} onDoubleClick={fitNames} onKeyDown={resizeKeys} />
+  )
 
   const scrollToToday = useCallback(() => {
     const el = scroller.current
@@ -188,19 +297,24 @@ export function Timeline({ d }: { d: Data }) {
 
   return (
     <div className={s.wrap}>
-      <Toolbar d={d} zoom={zoom} sheet={sheet} onToday={scrollToToday} />
+      <Toolbar d={d} zoom={zoom} sheet={sheet} onToday={scrollToToday}
+        scale={scale} onScale={(f) => setScale(f === 0 ? 1 : scale * f)} onFit={fitAll} />
       <div className={`${s.frame} ${sheet ? s.sheet : ''}`}>
         <div ref={scroller} className={s.scroller} data-dragging={drag?.mode ?? undefined}>
           <div className={s.grid} style={{ gridTemplateColumns: `${LEFT}px ${W}px`, paddingBottom: sheet ? 96 : 24 }}>
             <div className={s.corner} style={{ height: HEAD }}>
               <span className="mono muted">Plan item</span>
               <span className="mono muted">{narrow ? '' : 'Cards · Owner'}</span>
+              {handle}
             </div>
-            <svg className={s.scale} width={W} height={HEAD} aria-hidden="true">
+            <svg className={s.scale} width={W} height={HEAD} aria-hidden="true" onPointerDown={beginStretch}
+              onDoubleClick={fitAll}>
+              <title>Drag to stretch the timeline · double-click to fit · Ctrl + scroll to zoom</title>
               <Scale d0={d0} d1={d1} x={x} ppd={ppd} zoom={zoom} today={today} sheet={sheet} />
             </svg>
 
-            <div className={s.left} style={{ width: LEFT }}>
+            <div ref={leftRef} className={s.left} style={{ width: LEFT }}>
+              {handle}
               {rows.map((r) => (
                 <LeftRow key={r.key} row={r} d={d} height={ROW} narrow={narrow} />
               ))}
@@ -255,7 +369,10 @@ export function Timeline({ d }: { d: Data }) {
   )
 }
 
-function Toolbar({ d, zoom, sheet, onToday }: { d: Data; zoom: Zoom; sheet: boolean; onToday: () => void }) {
+function Toolbar({ d, zoom, sheet, onToday, scale, onScale, onFit }: {
+  d: Data; zoom: Zoom; sheet: boolean; onToday: () => void
+  scale?: number; onScale?: (factor: number) => void; onFit?: () => void
+}) {
   const set = useUI((x) => x.set)
   return (
     <div className={s.toolbar}>
@@ -266,6 +383,14 @@ function Toolbar({ d, zoom, sheet, onToday }: { d: Data; zoom: Zoom; sheet: bool
           <button key={z} aria-pressed={zoom === z} onClick={() => set({ zoom: z })}>{z}</button>
         ))}
       </div>
+      {onScale && onFit && (
+        <div className="seg" role="group" aria-label="Timeline scale">
+          <button onClick={() => onScale(1 / 1.25)} aria-label="Compress timeline" title="Compress (Ctrl + scroll)">−</button>
+          <button className="num" onClick={() => onScale(0)} title="Reset scale">{Math.round((scale ?? 1) * 100)}%</button>
+          <button onClick={() => onScale(1.25)} aria-label="Stretch timeline" title="Stretch (Ctrl + scroll)">+</button>
+          <button onClick={onFit} title="Fit the whole plan in view">Fit</button>
+        </div>
+      )}
       <button className="btn" onClick={onToday}>Today</button>
       <button className="chip" aria-pressed={sheet} onClick={() => set({ sheet: !sheet })}
         title="Dense sheet mode">
@@ -298,10 +423,10 @@ function LeftRow({ row, d, height, narrow }: { row: Row; d: Data; height: number
           {row.kind === 'project' ? (
             <>
               <span className={s.code}>{row.project.code}</span>
-              <span className={s.groupName}>{row.project.name}</span>
+              <span className={s.groupName} data-clip>{row.project.name}</span>
             </>
           ) : (
-            <span className={`mono ${s.groupName}`}>{row.section || 'No section'}</span>
+            <span className={`mono ${s.groupName}`} data-clip>{row.section || 'No section'}</span>
           )}
         </button>
         <span className={`num ${s.groupPct}`}>{Math.round(p)}%</span>
@@ -314,7 +439,7 @@ function LeftRow({ row, d, height, narrow }: { row: Row; d: Data; height: number
   const owner = item.ownerId ? d.personById.get(item.ownerId) : null
   return (
     <div className={`${s.row} ${s.itemRow}`} style={{ height }}>
-      <button className={s.itemTitle} onClick={() => ui.open({ kind: 'item', id: item.id })}
+      <button className={s.itemTitle} data-clip onClick={() => ui.open({ kind: 'item', id: item.id })}
         title={`${item.title} · ${short(item.start)} → ${short(item.end)}`}>
         {item.milestone && <span className={s.msDot} aria-label="Milestone" />}
         {item.title}
@@ -336,26 +461,43 @@ function Scale({ d0, d1, x, ppd, zoom, today, sheet }: {
 }) {
   const top: JSX.Element[] = []
   const bottom: JSX.Element[] = []
+  // Thin labels out when the scale is compressed so they don't overlap.
+  const weekPx = ppd * 7, monthPx = ppd * 30.4
+  const weekEvery = Math.max(1, Math.ceil(34 / weekPx))
+  const monthEvery = monthPx >= 30 ? 1 : monthPx >= 15 ? 3 : 6
   for (let day = d0; day <= d1; day++) {
     const { y, m, d } = parts(day)
     const wd = weekday(day)
     const X = x(day)
     if (zoom === 'week') {
       if (wd === 0) {
-        top.push(<Tick key={`t${day}`} x={X} y1={0} y2={22} label={`W${isoWeek(day)} · ${d} ${monthName(m)} ${y}`} />)
+        const w = isoWeek(day)
+        const label = weekPx >= 130 ? `W${w} · ${d} ${monthName(m)} ${y}` : w % weekEvery === 0 ? `W${w}` : undefined
+        top.push(<Tick key={`t${day}`} x={X} y1={0} y2={22} label={label} />)
       }
-      bottom.push(
-        <text key={`b${day}`} x={X + ppd / 2} y={37} textAnchor="middle" className={wd >= 5 ? s.dim : undefined}>
-          {'MTWTFSS'[wd]}{d}
-        </text>,
-      )
+      if (ppd >= 11) {
+        bottom.push(
+          <text key={`b${day}`} x={X + ppd / 2} y={37} textAnchor="middle" className={wd >= 5 ? s.dim : undefined}>
+            {ppd >= 20 ? 'MTWTFSS'[wd] : ''}{d}
+          </text>,
+        )
+      }
     } else if (zoom === 'month') {
-      if (d === 1 || day === d0) top.push(<Tick key={`t${day}`} x={X} y1={0} y2={22} label={`${monthName(m)} ${y}`} />)
-      if (wd === 0) bottom.push(<Tick key={`b${day}`} x={X} y1={22} y2={44} label={`W${isoWeek(day)}`} />)
+      if (d === 1 || day === d0) {
+        const label = m % monthEvery === 0 || day === d0 ? (monthPx >= 64 ? `${monthName(m)} ${y}` : monthName(m)) : undefined
+        top.push(<Tick key={`t${day}`} x={X} y1={0} y2={22} label={label} />)
+      }
+      if (wd === 0) {
+        const w = isoWeek(day)
+        bottom.push(<Tick key={`b${day}`} x={X} y1={22} y2={44} label={w % weekEvery === 0 ? `W${w}` : undefined} />)
+      }
     } else {
-      if ((d === 1 && m % 3 === 0) || day === d0) top.push(<Tick key={`t${day}`} x={X} y1={0} y2={22} label={`Q${Math.floor(m / 3) + 1} ${y}`} />)
-      if (d === 1) bottom.push(<Tick key={`b${day}`} x={X} y1={22} y2={44} label={monthName(m)} />)
-      if (sheet && wd === 0) bottom.push(<line key={`w${day}`} x1={X} x2={X} y1={38} y2={44} stroke="var(--line)" />)
+      if ((d === 1 && m % 3 === 0) || day === d0) {
+        const q = `Q${Math.floor(m / 3) + 1}`
+        top.push(<Tick key={`t${day}`} x={X} y1={0} y2={22} label={monthPx * 3 >= 64 ? `${q} ${y}` : q} />)
+      }
+      if (d === 1) bottom.push(<Tick key={`b${day}`} x={X} y1={22} y2={44} label={m % monthEvery === 0 ? monthName(m) : undefined} />)
+      if (sheet && wd === 0 && weekPx >= 4) bottom.push(<line key={`w${day}`} x1={X} x2={X} y1={38} y2={44} stroke="var(--line)" />)
     }
   }
   const tx = x(today) + ppd / 2
@@ -374,11 +516,11 @@ function Scale({ d0, d1, x, ppd, zoom, today, sheet }: {
   )
 }
 
-function Tick({ x, y1, y2, label }: { x: number; y1: number; y2: number; label: string }) {
+function Tick({ x, y1, y2, label }: { x: number; y1: number; y2: number; label?: string }) {
   return (
     <>
       <line x1={x + 0.5} x2={x + 0.5} y1={y1} y2={y2} stroke="var(--line)" />
-      <text x={x + 5} y={y1 + 15}>{label}</text>
+      {label && <text x={x + 5} y={y1 + 15}>{label}</text>}
     </>
   )
 }

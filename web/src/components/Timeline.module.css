@@ -29,7 +29,18 @@
   background: var(--surface); border-right: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong);
   font-size: 10px;
 }
-.scale { position: sticky; top: 0; z-index: 3; display: block; }
+.scale { position: sticky; top: 0; z-index: 3; display: block; cursor: ew-resize; touch-action: none; }
+
+/* Drag edge of the "Plan item" column (lives in both the corner and the left column). */
+.colHandle {
+  position: absolute; top: 0; bottom: 0; right: -5px; z-index: 6;
+  width: 9px; cursor: col-resize; touch-action: none; outline: none;
+}
+.colHandle::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 3px; border-radius: 2px;
+  background: var(--gold); opacity: 0; transition: opacity 120ms;
+}
+.colHandle:hover::after, .colHandle:focus-visible::after, .colHandle:active::after { opacity: 0.85; }
 .scaleText text { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; fill: var(--ink-2); text-transform: uppercase; }
 .dim { fill: var(--hatch) !important; }
 .todayText { fill: var(--on-gold) !important; font-weight: 600; font-size: 9px !important; letter-spacing: 0.08em !important; }

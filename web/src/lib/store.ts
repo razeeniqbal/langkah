@@ -33,6 +33,8 @@ interface UI {
   theme: Theme
   zoom: Zoom
   sheet: boolean
+  leftWidth: number // px, timeline "Plan item" column
+  timeScale: Record<Zoom, number> // multiplier on the zoom's pixels-per-day
   collapsed: Record<string, boolean>
   filters: Filters
   editor: Editor | null
@@ -47,6 +49,7 @@ interface UI {
   setFilter: <K extends keyof Filters>(k: K, v: Filters[K]) => void
   clearFilters: () => void
   toggleSection: (key: string) => void
+  setTimeScale: (zoom: Zoom, v: number) => void
   open: (e: Editor) => void
   close: () => void
   toast: (t: Omit<Toast, 'id'>) => void
@@ -79,6 +82,8 @@ export const useUI = create<UI>()(
       theme: 'dark',
       zoom: 'month',
       sheet: false,
+      leftWidth: 340,
+      timeScale: { week: 1, month: 1, quarter: 1 },
       collapsed: {},
       filters: noFilters,
       editor: null,
@@ -94,6 +99,7 @@ export const useUI = create<UI>()(
       setFilter: (k, v) => set((s) => ({ filters: { ...s.filters, [k]: v } })),
       clearFilters: () => set((s) => ({ filters: { ...noFilters, myWork: s.filters.myWork } })),
       toggleSection: (key) => set((s) => ({ collapsed: { ...s.collapsed, [key]: !s.collapsed[key] } })),
+      setTimeScale: (zoom, v) => set((s) => ({ timeScale: { ...s.timeScale, [zoom]: v } })),
       open: (editor) => set({ editor, palette: false }),
       close: () => set({ editor: null }),
       toast: (t) => {
@@ -113,6 +119,8 @@ export const useUI = create<UI>()(
         theme: s.theme,
         zoom: s.zoom,
         sheet: s.sheet,
+        leftWidth: s.leftWidth,
+        timeScale: s.timeScale,
         collapsed: s.collapsed,
         filters: { ...noFilters, myWork: s.filters.myWork, hideDone: s.filters.hideDone },
       }),
