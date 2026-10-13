@@ -3,10 +3,11 @@ import {
   type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { memo, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useCreateCard, useUpdateCard } from '../lib/api'
 import { short } from '../lib/dates'
 import { isLate, type Data } from '../lib/data'
-import { useUI } from '../lib/store'
+import { singleItem, uiZoom, useUI } from '../lib/store'
 import { STATUSES, type Card, type Status } from '../lib/types'
 import { Counter, Icon, Monogram, ProgressBar } from './ui'
 import s from './Board.module.css'
@@ -42,9 +43,13 @@ export function Board({ d }: { d: Data }) {
               cards={d.visibleCards.filter((c) => c.status === st.id)} />
           ))}
         </div>
-        <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
-          {active && <CardTile d={d} card={active} overlay />}
-        </DragOverlay>
+        {/* Outside the zoomed #root so the overlay follows the pointer in screen pixels. */}
+        {createPortal(
+          <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
+            {active && <div style={{ zoom: uiZoom() }}><CardTile d={d} card={active} overlay /></div>}
+          </DragOverlay>,
+          document.body,
+        )}
       </DndContext>
     </div>
   )
@@ -53,7 +58,7 @@ export function Board({ d }: { d: Data }) {
 /** B6: a plan item's progress strip on top of the filtered board. */
 function ItemStrip({ d }: { d: Data }) {
   const ui = useUI()
-  const id = ui.filters.planItemId
+  const id = singleItem(ui.filters)
   const item = id ? d.itemById.get(id) : undefined
   if (!item) return null
   const p = d.progress.get(item.id)
@@ -72,7 +77,7 @@ function ItemStrip({ d }: { d: Data }) {
         <span className="mono muted">{p?.cardsDone ?? 0}/{p?.cardCount ?? 0} cards · {p?.mode ?? 'auto'}</span>
       </div>
       <strong className={s.stripPct}><Counter value={p?.progress ?? 0} /></strong>
-      <button className="btn ghost icon" title="Clear plan item filter" onClick={() => ui.setFilter('planItemId', null)}>
+      <button className="btn ghost icon" title="Clear plan item filter" onClick={() => ui.setFilter('planItemIds', [])}>
         <Icon name="close" size={12} />
       </button>
     </div>
@@ -93,7 +98,7 @@ function Column({ d, status, label, credit, cards }: {
         </div>
         <div className={`mono muted ${s.colMeta}`}>
           <span>{points} pt</span>
-          <span title="How much a card in this column counts toward its plan item's progress">counts {Math.round(credit * 100)}%</span>
+          <span title="How much a card in this column counts toward progress">counts {Math.round(credit * 100)}%</span>
         </div>
       </header>
       <div ref={setNodeRef} className={s.colBody}>
@@ -152,11 +157,11 @@ const CardTile = memo(function CardTile({ d, card, overlay }: { d: Data; card: C
       <div className={s.ref}>
         {item ? (
           <button className={s.refBtn} title={`Show only “${item.title}”`} {...stop}
-            onClick={() => ui.setFilter('planItemId', item.id)}>
+            onClick={() => ui.setFilter('planItemIds', [item.id])}>
             {d.all && <b>{project?.code}</b>}{item.title}
           </button>
         ) : (
-          <span className="muted">{d.all && <b>{project?.code} </b>}Unlinked</span>
+          <span className="muted" title="Not on the timeline; counts toward the project %">{d.all && <b>{project?.code} </b>}No plan item</span>
         )}
       </div>
 
@@ -209,7 +214,7 @@ function InlineInput({ initial, onDone, type = 'text', ...rest }: {
 function QuickAdd({ d, status }: { d: Data; status: Status }) {
   const [on, setOn] = useState(false)
   const create = useCreateCard()
-  const planItemId = useUI((x) => x.filters.planItemId)
+  const planItemId = useUI((x) => singleItem(x.filters))
   const me = useUI((x) => x.filters.myWork) ? d.me : null
   if (!d.defaultProjectId) return null
   if (!on) {

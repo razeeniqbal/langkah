@@ -15,7 +15,7 @@ from datetime import date, timedelta
 from sqlalchemy import delete, func, select
 
 from .db import SessionLocal, init_db
-from .models import Card, PlanItem, Person, Project, ProjectMember, new_id
+from .models import Card, Note, PlanItem, Person, Project, ProjectMember, new_id
 
 STATUS_ALIASES = {
     "backlog": "backlog", "todo": "todo", "to do": "todo", "to-do": "todo",
@@ -51,13 +51,13 @@ def _code(name: str) -> str:
 
 
 def wipe(db) -> None:
-    for model in (Card, PlanItem, ProjectMember, Person, Project):
+    for model in (Note, Card, PlanItem, ProjectMember, Person, Project):
         db.execute(delete(model))
 
 
 def import_data(db, raw: dict) -> dict:
     data = raw.get("state", raw) if isinstance(raw, dict) else {"planItems": raw}
-    counts = {"projects": 0, "people": 0, "planItems": 0, "cards": 0}
+    counts = {"projects": 0, "people": 0, "planItems": 0, "cards": 0, "notes": 0}
 
     # Projects. The prototype held one project; create it if the dump has none.
     projects = _pick(data, "projects", default=[])
@@ -154,6 +154,17 @@ def import_data(db, raw: dict) -> dict:
             order=int(_pick(c, "order", default=i)),
         ))
         counts["cards"] += 1
+
+    # Notes (pending items not yet on the board).
+    for i, n in enumerate(_pick(data, "notes", default=[])):
+        text_ = str(_pick(n, "text", "title", default="")).strip()
+        if not text_:
+            continue
+        v = _pick(n, "projectId", "project_id", "project")
+        db.add(Note(id=str(_pick(n, "id", default=new_id("n"))), text=text_[:500],
+                    project_id=pid_map.get(str(v)) if v is not None else None,
+                    order=int(_pick(n, "order", default=i))))
+        counts["notes"] += 1
     return counts
 
 

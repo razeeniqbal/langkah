@@ -5,6 +5,7 @@ Plan / Track / Deliver. A personal project tracker where Kanban cards drive the 
 - **Board**: five columns, drag and drop (mouse or keyboard), inline rename and due date, progress strip per plan item.
 - **Timeline**: custom SVG Gantt with Week, Month and Quarter zoom, drag to move or resize, milestones, progress knob, card due markers, and a drawing-sheet mode.
 - **Team**: workload per person, add, rename and remove people per project.
+- **Notes**: jot down pending items first, file them under a project, then send each one to the board as a card.
 - Command palette (`Ctrl K`), keyboard shortcuts, light and dark themes.
 
 Progress is computed in one place, the `plan_item_progress` SQL view, and served from `/api/summary`.

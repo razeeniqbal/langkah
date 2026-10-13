@@ -35,3 +35,33 @@
   .toasts { bottom: calc(72px + env(safe-area-inset-bottom)); }
   .emptyTitle { font-size: 22px; }
 }
+
+/* MultiSelect: a select-styled button with a checkbox panel. */
+.ms { position: relative; }
+.msButton { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; cursor: pointer; }
+.msButton[data-active] { border-color: var(--gold); }
+.msSummary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msCount {
+  flex: none; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 5px;
+  display: grid; place-items: center; font-size: 10px; background: var(--gold); color: var(--on-gold);
+}
+.msPanel {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30;
+  width: max(100%, 320px); max-width: min(420px, calc(100vw - 24px));
+  display: flex; flex-direction: column;
+  border: 1px solid var(--line-strong); border-radius: var(--r-3); background: var(--surface); box-shadow: var(--shadow);
+}
+.msSearch { margin: 8px 8px 4px; width: auto; }
+.msList { max-height: 320px; overflow: auto; padding: 4px 0; }
+.msGroup { padding: 8px 12px 3px; font-size: 9.5px; }
+.msOption {
+  display: flex; align-items: center; gap: 9px; padding: 6px 12px; cursor: pointer; font-size: 13px;
+}
+.msOption:hover { background: var(--elev); }
+.msOption span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msOption input { flex: none; accent-color: var(--gold); width: 15px; height: 15px; margin: 0; }
+.msEmpty { padding: 10px 12px; font-size: 13px; }
+.msFoot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 6px 6px 12px; border-top: 1px solid var(--line); font-size: 10px;
+}

@@ -1,5 +1,5 @@
 import type { Data } from '../lib/data'
-import { useUI, type Theme } from '../lib/store'
+import { UI_SCALES, useUI, type Theme } from '../lib/store'
 import { LogoMark, Wordmark } from './Brand'
 import { Icon } from './ui'
 import s from './Sidebar.module.css'
@@ -57,6 +57,12 @@ export function Sidebar({ d }: { d: Data }) {
         <button className={s.footBtn} onClick={() => ui.set({ theme: NEXT_THEME[ui.theme] })} title="Theme">
           <Icon name={ui.theme === 'light' ? 'sun' : 'moon'} size={15} />
           <span className={s.label}>Theme · <span className={s.themeName}>{ui.theme}</span></span>
+          <span className={`${s.label} ${s.chevR}`}><Icon name="chevron" size={12} /></span>
+        </button>
+        <button className={s.footBtn} title="Display size: make the whole app smaller or larger"
+          onClick={() => ui.set({ uiScale: UI_SCALES[(UI_SCALES.indexOf(ui.uiScale) + 1) % UI_SCALES.length] ?? 1 })}>
+          <Icon name="size" size={15} />
+          <span className={s.label}>Display size · <span className="num">{Math.round((ui.uiScale || 1) * 100)}%</span></span>
           <span className={`${s.label} ${s.chevR}`}><Icon name="chevron" size={12} /></span>
         </button>
       </div>

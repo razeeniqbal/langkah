@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { initials } from '../lib/data'
 import { useUI } from '../lib/store'
 import type { Person } from '../lib/types'
@@ -18,6 +18,9 @@ const PATHS: Record<string, string> = {
   moon: 'M13.5 9.5A5.5 5.5 0 1 1 6.5 2.5a4.5 4.5 0 0 0 7 7z',
   sigma: 'M12 3H4l4.5 5L4 13h8',
   edit: 'M3 13l1-3 7-7 2 2-7 7zM10 4l2 2',
+  size: 'M2 13l3.5-9 3.5 9M3.2 10h4.6M11.5 6.5v5M9 9h5',
+  notes: 'M3.5 2.5h9v11h-9zM6 5.5h4M6 8h4M6 10.5h2.5',
+  send: 'M3 8h9M8.5 4.5L12 8l-3.5 3.5',
 }
 
 export function Icon({ name, size = 14 }: { name: keyof typeof PATHS | string; size?: number }) {
@@ -114,6 +117,87 @@ export function Toasts() {
           )}
         </button>
       ))}
+    </div>
+  )
+}
+
+export interface Option { value: string; label: string; group?: string }
+
+/**
+ * A dropdown of checkboxes. Empty value = no filter ("all"). Search appears
+ * when the list is long; Esc or a click outside closes it.
+ */
+export function MultiSelect({ label, all, noun, options, value, onChange, className }: {
+  label: string; all: string; noun: string; options: Option[]; value: string[]
+  onChange: (v: string[]) => void; className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const out = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false)
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', out)
+    document.addEventListener('keydown', esc, true)
+    return () => {
+      document.removeEventListener('mousedown', out)
+      document.removeEventListener('keydown', esc, true)
+    }
+  }, [open])
+  useEffect(() => { if (!open) setQ('') }, [open])
+
+  const picked = new Set(value)
+  const shown = useMemo(() => {
+    const t = q.trim().toLowerCase()
+    return t ? options.filter((o) => `${o.label} ${o.group ?? ''}`.toLowerCase().includes(t)) : options
+  }, [options, q])
+  const toggle = (v: string) => onChange(picked.has(v) ? value.filter((x) => x !== v) : [...value, v])
+  const summary = value.length === 0 ? all
+    : value.length === 1 ? options.find((o) => o.value === value[0])?.label ?? `1 ${noun}`
+    : `${value.length} ${noun}`
+
+  let lastGroup: string | undefined
+  return (
+    <div ref={box} className={`${s.ms} ${className ?? ''}`}>
+      <button type="button" className={`select ${s.msButton}`} aria-haspopup="listbox" aria-expanded={open}
+        aria-label={`${label}: ${summary}`} data-active={value.length > 0 || undefined} onClick={() => setOpen(!open)}>
+        <span className={s.msSummary}>{summary}</span>
+        {value.length > 1 && <span className={`num ${s.msCount}`}>{value.length}</span>}
+      </button>
+      {open && (
+        <div className={s.msPanel} role="listbox" aria-multiselectable="true" aria-label={label}>
+          {options.length > 8 && (
+            <input className={`input ${s.msSearch}`} placeholder={`Find ${noun}…`} value={q} autoFocus
+              onChange={(e) => setQ(e.target.value)} />
+          )}
+          <div className={s.msList}>
+            {shown.map((o) => {
+              const head = o.group && o.group !== lastGroup ? o.group : null
+              lastGroup = o.group
+              return (
+                <div key={o.value}>
+                  {head && <div className={`mono muted ${s.msGroup}`}>{head}</div>}
+                  <label className={s.msOption} title={o.label}>
+                    <input type="checkbox" checked={picked.has(o.value)} onChange={() => toggle(o.value)} />
+                    <span>{o.label}</span>
+                  </label>
+                </div>
+              )
+            })}
+            {shown.length === 0 && <div className={`muted ${s.msEmpty}`}>No matches</div>}
+          </div>
+          <div className={s.msFoot}>
+            <span className="mono muted">{value.length ? `${value.length} selected` : all}</span>
+            <button type="button" className="btn ghost" disabled={!value.length} onClick={() => onChange([])}>Clear</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

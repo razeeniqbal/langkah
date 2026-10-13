@@ -18,7 +18,6 @@
 .scroller { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; }
 .scroller[data-dragging='move'] { cursor: grabbing; }
 .scroller[data-dragging='start'], .scroller[data-dragging='end'] { cursor: ew-resize; }
-.scroller[data-dragging='knob'] { cursor: col-resize; }
 .scroller[data-dragging] * { user-select: none; }
 
 .grid { display: grid; width: max-content; }
@@ -86,8 +85,6 @@
 .item:hover .body { stroke: var(--ink-2); stroke-width: 1.5; }
 .handle { fill: transparent; cursor: ew-resize; }
 .item:hover .handle { fill: var(--ink); fill-opacity: 0.12; }
-.knob { cursor: col-resize; }
-.knob path { transition: transform 120ms; }
 .ms { cursor: grab; }
 .barLabel { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-2); pointer-events: none; }
 .behindLabel { fill: var(--danger); font-weight: 600; }

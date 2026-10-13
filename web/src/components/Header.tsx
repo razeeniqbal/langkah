@@ -1,13 +1,14 @@
 import { long, toDay, weekday } from '../lib/dates'
 import { assigneeGroups, type Data } from '../lib/data'
-import { useUI, type View } from '../lib/store'
-import { Counter, Icon, Monogram } from './ui'
+import { singleItem, useUI, type View } from '../lib/store'
+import { Counter, Icon, Monogram, MultiSelect } from './ui'
 import s from './Header.module.css'
 
 const VIEWS: { id: View; label: string; key: string }[] = [
   { id: 'board', label: 'Board', key: '1' },
   { id: 'timeline', label: 'Timeline', key: '2' },
   { id: 'team', label: 'Team', key: '3' },
+  { id: 'notes', label: 'Notes', key: '4' },
 ]
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -15,7 +16,8 @@ export function Header({ d }: { d: Data }) {
   const ui = useUI()
   const f = ui.filters
   const { team, others } = assigneeGroups(d, d.project?.id ?? null)
-  const anyFilter = f.search || f.planItemId || f.assigneeId || f.hideDone
+  const anyFilter = f.search || f.planItemIds.length || f.assigneeIds.length || f.hideDone
+  const people = d.all ? d.people : team
 
   return (
     <header className={s.head}>
@@ -47,28 +49,22 @@ export function Header({ d }: { d: Data }) {
           <span className="sr-only">Search</span>
           <input id="wb-search" placeholder="Search  /" value={f.search} onChange={(e) => ui.setFilter('search', e.target.value)} />
         </label>
-        <select className={`select ${s.sel}`} aria-label="Plan item" value={f.planItemId ?? ''}
-          onChange={(e) => ui.setFilter('planItemId', e.target.value || null)}>
-          <option value="">All plan items</option>
-          {d.scopeItems.map((i) => (
-            <option key={i.id} value={i.id}>
-              {d.all ? `${d.projectById.get(i.projectId)?.code} · ` : ''}{i.title}
-            </option>
-          ))}
-        </select>
-        <select className={`select ${s.sel}`} aria-label="Assignee" value={f.assigneeId ?? ''}
-          onChange={(e) => ui.setFilter('assigneeId', e.target.value || null)}>
-          <option value="">Anyone</option>
-          <option value="none">Unassigned</option>
-          <optgroup label={d.all ? 'People' : 'Team'}>
-            {(d.all ? d.people : team).map((p) => <option key={p.id} value={p.id}>{p.name}{p.isMe ? ' (me)' : ''}</option>)}
-          </optgroup>
-          {!d.all && others.length > 0 && (
-            <optgroup label="Others">
-              {others.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </optgroup>
-          )}
-        </select>
+        <MultiSelect className={s.sel} label="Plan item" all="All plan items" noun="plan items"
+          value={f.planItemIds} onChange={(v) => ui.setFilter('planItemIds', v)}
+          options={[
+            { value: 'none', label: 'No plan item' },
+            ...d.scopeItems.map((i) => ({
+              value: i.id, label: i.title,
+              group: d.all ? `${d.projectById.get(i.projectId)?.code} · ${i.section || 'No section'}` : i.section || 'No section',
+            })),
+          ]} />
+        <MultiSelect className={s.sel} label="Assignee" all="Anyone" noun="people"
+          value={f.assigneeIds} onChange={(v) => ui.setFilter('assigneeIds', v)}
+          options={[
+            { value: 'none', label: 'Unassigned' },
+            ...people.map((p) => ({ value: p.id, label: p.isMe ? `${p.name} (me)` : p.name, group: d.all ? 'People' : 'Team' })),
+            ...(d.all ? [] : others.map((p) => ({ value: p.id, label: p.name, group: 'Others' }))),
+          ]} />
         <button className="chip" aria-pressed={f.myWork} onClick={() => ui.setFilter('myWork', !f.myWork)}
           title="Only my cards and plan items">
           My work
@@ -101,14 +97,17 @@ export function Header({ d }: { d: Data }) {
   )
 }
 
-/** Sheet totals: overall progress, plan items, open and late cards. */
+/** Sheet totals: progress (from cards), cards done, open and late cards. */
 export function Stats({ d }: { d: Data }) {
   const open = d.scopeCards.filter((c) => c.status !== 'done')
   const late = open.filter((c) => c.due && c.due < d.today).length
   return (
     <dl className={s.stats}>
       <div><dt className="mono muted">Complete</dt><dd className={s.big}><Counter value={d.overall} /></dd></div>
-      <div className={s.optional}><dt className="mono muted">Plan items</dt><dd className="num">{d.scopeItems.length}</dd></div>
+      <div className={s.optional}>
+        <dt className="mono muted">Cards done</dt>
+        <dd className="num">{d.scopeCards.length - open.length}/{d.scopeCards.length}</dd>
+      </div>
       <div>
         <dt className="mono muted">Open cards</dt>
         <dd className="num">{open.length}{late > 0 && <span className={s.late}> · {late} late</span>}</dd>
@@ -123,7 +122,7 @@ export function Actions({ d }: { d: Data }) {
   return (
     <div className={s.actions}>
       <button className="btn" disabled={!d.defaultProjectId}
-        onClick={() => ui.open({ kind: 'card', draft: { projectId: d.defaultProjectId!, planItemId: ui.filters.planItemId, status: 'todo' } })}
+        onClick={() => ui.open({ kind: 'card', draft: { projectId: d.defaultProjectId!, planItemId: singleItem(ui.filters), status: 'todo' } })}
         title="New card (N)" aria-label="New card">
         <Icon name="plus" size={14} /> <span className={s.actLabel}>Card</span>
       </button>

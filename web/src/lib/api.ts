@@ -1,6 +1,6 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useUI } from './store'
-import type { Card, Person, PlanItem, Project, Summary } from './types'
+import type { Card, Note, Person, PlanItem, Project, Summary } from './types'
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -49,9 +49,10 @@ export const useProjects = () => useQuery({ queryKey: ['projects'], queryFn: () 
 export const usePlanItems = () => useQuery({ queryKey: ['planItems'], queryFn: () => api.get<PlanItem[]>('/plan_items') })
 export const useCards = () => useQuery({ queryKey: ['cards'], queryFn: () => api.get<Card[]>('/cards') })
 export const usePeople = () => useQuery({ queryKey: ['people'], queryFn: () => api.get<Person[]>('/people') })
+export const useNotes = () => useQuery({ queryKey: ['notes'], queryFn: () => api.get<Note[]>('/notes') })
 export const useSummary = () => useQuery({ queryKey: ['summary'], queryFn: () => api.get<Summary>('/summary') })
 
-const ALL = ['projects', 'planItems', 'cards', 'people', 'summary']
+const ALL = ['projects', 'planItems', 'cards', 'people', 'summary', 'notes']
 
 function useInvalidate() {
   const qc = useQueryClient()
@@ -175,6 +176,45 @@ export function useDeleteProject() {
     onError,
     onSettled: () => invalidate(['projects', 'summary']),
   })
+}
+
+// Notes ---------------------------------------------------------------------
+export function useNoteOps() {
+  const qc = useQueryClient()
+  const invalidate = useInvalidate()
+  // Optimistic edits so typing and filing feel instant.
+  const optimistic = (fn: (ns: Note[]) => Note[]) => async () => {
+    await qc.cancelQueries({ queryKey: ['notes'] })
+    const prev = qc.getQueryData<Note[]>(['notes'])
+    qc.setQueryData<Note[]>(['notes'], (ns) => fn(ns ?? []))
+    return { prev }
+  }
+  const rollback = (e: Error, _v: unknown, ctx?: { prev?: Note[] }) => {
+    if (ctx?.prev) qc.setQueryData(['notes'], ctx.prev)
+    onError(e)
+  }
+  const settle = () => invalidate(['notes'])
+  return {
+    create: useMutation({ mutationFn: (n: { text: string; projectId: string | null }) => api.post<Note>('/notes', n), onError, onSettled: settle }),
+    update: useMutation({
+      mutationFn: ({ id, ...patch }: Partial<Note> & { id: string }) => api.patch<Note>(`/notes/${id}`, patch),
+      onMutate: (v) => optimistic((ns) => ns.map((n) => (n.id === v.id ? { ...n, ...v } : n)))(),
+      onError: rollback, onSettled: settle,
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => api.del(`/notes/${id}`),
+      onMutate: (id) => optimistic((ns) => ns.filter((n) => n.id !== id))(),
+      onError: rollback, onSettled: settle,
+    }),
+    /** Turn a note into a card; the API removes the note in the same transaction. */
+    promote: useMutation({
+      mutationFn: ({ id, ...card }: Partial<Card> & { id: string }) => api.post<Card>(`/notes/${id}/promote`, card),
+      onMutate: (v) => optimistic((ns) => ns.filter((n) => n.id !== v.id))(),
+      onSuccess: (c) => useUI.getState().set({ settling: c.id }),
+      onError: rollback,
+      onSettled: () => invalidate(['notes', 'cards', 'summary']),
+    }),
+  }
 }
 
 // People --------------------------------------------------------------------

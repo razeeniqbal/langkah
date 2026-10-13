@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCreateCard } from '../lib/api'
 import type { Data } from '../lib/data'
-import { useUI } from '../lib/store'
+import { singleItem, useUI } from '../lib/store'
 import { Icon } from './ui'
 import s from './CommandPalette.module.css'
 
@@ -34,7 +34,8 @@ export function CommandPalette({ d }: { d: Data }) {
     const hit = (...xs: string[]) => !query || xs.some((x) => x.toLowerCase().includes(query))
     const out: Cmd[] = []
     const pid = d.defaultProjectId
-    const filterItem = ui.filters.planItemId ? d.itemById.get(ui.filters.planItemId) : undefined
+    const one = singleItem(ui.filters)
+    const filterItem = one ? d.itemById.get(one) : undefined
 
     if (query && pid) {
       out.push({
@@ -75,7 +76,7 @@ export function CommandPalette({ d }: { d: Data }) {
       if (query && hit(p.name)) {
         out.push({
           id: `m-${p.id}`, group: 'People', label: p.name, meta: p.isMe ? 'me' : 'show cards',
-          run: () => { ui.setFilter('assigneeId', p.id); ui.setView('board') },
+          run: () => { ui.setFilter('assigneeIds', [p.id]); ui.setView('board') },
         })
       }
     }

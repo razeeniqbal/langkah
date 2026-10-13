@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { useUpdateItem } from '../lib/api'
 import { fromDay, isoWeek, long, monthName, parts, short, toDay, weekday } from '../lib/dates'
 import { isBehind, isLate, type Data } from '../lib/data'
-import { useUI, type Zoom } from '../lib/store'
+import { uiZoom, useUI, type Zoom } from '../lib/store'
 import type { PlanItem, Project } from '../lib/types'
 import { Actions, Stats } from './Header'
 import { Empty, Icon, Monogram } from './ui'
@@ -21,10 +21,11 @@ function track(e: React.PointerEvent, cursor: string, onMove: (dx: number) => vo
   e.preventDefault()
   e.stopPropagation()
   const x0 = e.clientX
+  const k = uiZoom()
   const body = document.body.style
   body.cursor = cursor
   body.userSelect = 'none'
-  const move = (ev: PointerEvent) => onMove(ev.clientX - x0)
+  const move = (ev: PointerEvent) => onMove((ev.clientX - x0) / k)
   const end = () => {
     body.cursor = ''
     body.userSelect = ''
@@ -44,15 +45,12 @@ type Row =
 
 interface Drag {
   id: string
-  mode: 'move' | 'start' | 'end' | 'knob'
+  mode: 'move' | 'start' | 'end'
   x0: number
   start: number
   end: number
-  progress: number
-  hasCards: boolean
   dStart: number
   dEnd: number
-  dProgress: number
   moved: boolean
 }
 
@@ -82,10 +80,6 @@ export function Timeline({ d }: { d: Data }) {
   const [drag, setDrag] = useState<Drag | null>(null)
   const dragRef = useRef<Drag | null>(null)
   dragRef.current = drag
-  // Holds a knob value until the server's summary catches up, so the bar
-  // doesn't flick back to the old value for a frame.
-  const [pending, setPending] = useState<Record<string, number>>({})
-  useEffect(() => setPending({}), [d.progress])
 
   // Rows: project (All projects only) → section → items.
   const rows = useMemo(() => {
@@ -148,7 +142,7 @@ export function Timeline({ d }: { d: Data }) {
     const el = scroller.current
     if (el) {
       const r = el.getBoundingClientRect()
-      const px = Math.max(0, clientX === undefined ? (el.clientWidth - LEFT) / 2 : clientX - r.left - LEFT)
+      const px = Math.max(0, clientX === undefined ? (el.clientWidth - LEFT) / 2 : (clientX - r.left) / uiZoom() - LEFT)
       anchor.current = { day: d0 + (el.scrollLeft + px) / ppd, px }
     }
     useUI.getState().setTimeScale(zoom, clamp(next, SCALE_MIN, SCALE_MAX))
@@ -182,7 +176,7 @@ export function Timeline({ d }: { d: Data }) {
   const beginStretch = (e: React.PointerEvent) => {
     const el = scroller.current
     if (!el) return
-    const px = Math.max(0, e.clientX - el.getBoundingClientRect().left - LEFT)
+    const px = Math.max(0, (e.clientX - el.getBoundingClientRect().left) / uiZoom() - LEFT)
     const day = d0 + (el.scrollLeft + px) / ppd
     const s0 = scale
     track(e, 'ew-resize', (dx) => {
@@ -227,34 +221,27 @@ export function Timeline({ d }: { d: Data }) {
     if (el) el.scrollLeft = Math.max(0, x(today) - (el.clientWidth - LEFT) * 0.3)
   }, [zoom])
 
-  // Pointer dragging: move, resize, milestone, progress knob.
+  // Pointer dragging: move, resize, milestone. Progress only comes from cards.
   useEffect(() => {
     if (!drag) return
     const move = (e: PointerEvent) => {
       const g = dragRef.current!
-      const dx = e.clientX - g.x0
+      const dx = (e.clientX - g.x0) / uiZoom()
       const dd = Math.round(dx / ppd)
       const next = { ...g, moved: g.moved || Math.abs(dx) > 3 }
       if (g.mode === 'move') Object.assign(next, { dStart: g.start + dd, dEnd: g.end + dd })
       if (g.mode === 'start') next.dStart = Math.min(g.start + dd, g.end)
       if (g.mode === 'end') next.dEnd = Math.max(g.end + dd, g.start)
-      if (g.mode === 'knob') {
-        const w = (g.end - g.start + 1) * ppd
-        next.dProgress = Math.max(0, Math.min(100, Math.round((g.progress + (dx / w) * 100) / 5) * 5))
-      }
       setDrag(next)
     }
     const up = () => {
       const g = dragRef.current!
       setDrag(null)
       if (!g.moved) {
-        if (g.mode !== 'knob') useUI.getState().open({ kind: 'item', id: g.id })
+        useUI.getState().open({ kind: 'item', id: g.id })
         return
       }
-      if (g.mode === 'knob') {
-        setPending((p) => ({ ...p, [g.id]: g.dProgress }))
-        update.mutate({ id: g.id, manualProgress: g.dProgress, ...(g.hasCards ? { progressMode: 'manual' as const } : {}) })
-      } else if (g.dStart !== g.start || g.dEnd !== g.end) {
+      if (g.dStart !== g.start || g.dEnd !== g.end) {
         update.mutate({ id: g.id, start: fromDay(g.dStart), end: fromDay(g.dEnd) })
       }
     }
@@ -269,12 +256,12 @@ export function Timeline({ d }: { d: Data }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drag === null])
 
-  const begin = (e: React.PointerEvent, item: PlanItem, mode: Drag['mode'], progress: number, hasCards: boolean) => {
+  const begin = (e: React.PointerEvent, item: PlanItem, mode: Drag['mode']) => {
     if (e.button !== 0) return
     e.preventDefault()
     e.stopPropagation()
     const start = toDay(item.start), end = toDay(item.end)
-    setDrag({ id: item.id, mode, x0: e.clientX, start, end, progress, hasCards, dStart: start, dEnd: end, dProgress: progress, moved: false })
+    setDrag({ id: item.id, mode, x0: e.clientX, start, end, dStart: start, dEnd: end, moved: false })
   }
 
   const span = (items: PlanItem[]) =>
@@ -343,21 +330,19 @@ export function Timeline({ d }: { d: Data }) {
                 const item = r.item
                 const ip = d.progress.get(item.id)
                 const cards = d.cardsByItem.get(item.id) ?? []
-                const hasCards = cards.length > 0
                 const g = drag?.id === item.id ? drag : null
                 const start = g ? g.dStart : toDay(item.start)
                 const end = g ? g.dEnd : toDay(item.end)
-                const progress = g?.mode === 'knob' ? g.dProgress : pending[item.id] ?? ip?.progress ?? item.manualProgress
+                const progress = ip?.progress ?? 0
                 const behind = isBehind(item, progress, d.today)
-                const knob = !hasCards || item.progressMode === 'manual'
                 return (
                   <ItemBar key={item.id} item={item} y={y} ROW={ROW} x={x} ppd={ppd} start={start} end={end}
-                    progress={progress} behind={behind} knob={knob} dragging={g} sheet={sheet}
+                    progress={progress} behind={behind} dragging={g} sheet={sheet}
                     markers={cards.filter((c) => c.due).map((c) => ({
                       id: c.id, x: x(toDay(c.due!)) + ppd / 2, title: `${c.title} · due ${short(c.due)}`,
                       tone: c.status === 'done' ? 'done' : isLate(c, d.today) ? 'late' : 'open',
                     }))}
-                    onBegin={(e, mode) => begin(e, item, mode, progress, hasCards)} />
+                    onBegin={(e, mode) => begin(e, item, mode)} />
                 )
               })}
             </svg>
@@ -447,7 +432,7 @@ function LeftRow({ row, d, height, narrow }: { row: Row; d: Data; height: number
       {behind && !narrow && <span className="tag late" title="End date passed and not complete">Behind</span>}
       {!narrow && (
         <button className={s.counter} title="Open these cards on the board"
-          onClick={() => { ui.setFilter('planItemId', item.id); ui.setView('board') }}>
+          onClick={() => { ui.setFilter('planItemIds', [item.id]); ui.setView('board') }}>
           {ip?.cardsDone ?? 0}/{ip?.cardCount ?? 0}
         </button>
       )}
@@ -563,13 +548,13 @@ function SummaryBar({ x1, x2, y, ROW, progress, strong }: { x1: number; x2: numb
 
 interface Marker { id: string; x: number; title: string; tone: 'done' | 'late' | 'open' }
 
-function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dragging, sheet, markers, onBegin }: {
+function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, dragging, sheet, markers, onBegin }: {
   item: PlanItem; y: number; ROW: number; x: (d: number) => number; ppd: number; start: number; end: number
-  progress: number; behind: boolean; knob: boolean; dragging: Drag | null; sheet: boolean; markers: Marker[]
+  progress: number; behind: boolean; dragging: Drag | null; sheet: boolean; markers: Marker[]
   onBegin: (e: React.PointerEvent, mode: Drag['mode']) => void
 }) {
   const stroke = behind ? 'var(--danger)' : 'var(--bar-line)'
-  const label = dragging && dragging.mode !== 'knob' && dragging.moved
+  const label = dragging && dragging.moved
     ? `${short(fromDay(start))} → ${short(fromDay(end))} · ${end - start + 1}d`
     : `${Math.round(progress)}%`
 
@@ -592,24 +577,16 @@ function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dra
   const by = y + (ROW - bh) / 2 - (markers.length ? 2 : 0)
   const x1 = x(start)
   const w = (end - start + 1) * ppd
-  const kx = x1 + (w * progress) / 100
   return (
     <g className={s.item} data-active={dragging ? true : undefined}>
       <title>{`${item.title} · ${short(fromDay(start))} → ${short(fromDay(end))} · ${Math.round(progress)}%`}</title>
       <rect x={x1} y={by} width={w} height={bh} rx={4} fill="url(#wb-hatch)" />
-      <rect x={x1} y={by} width={w} height={bh} rx={4} fill="var(--accent)" className={dragging?.mode === 'knob' ? undefined : s.fill}
+      <rect x={x1} y={by} width={w} height={bh} rx={4} fill="var(--accent)" className={s.fill}
         style={{ transform: `scaleX(${progress / 100})`, transformOrigin: `${x1}px 0` }} />
       <rect x={x1 + 0.5} y={by + 0.5} width={Math.max(w - 1, 1)} height={bh - 1} rx={3.5} fill="none" stroke={stroke}
         strokeWidth={behind ? 1.5 : 1} className={s.body} onPointerDown={(e) => onBegin(e, 'move')} pointerEvents="all" />
       <rect x={x1 - 3} y={by - 2} width={7} height={bh + 4} className={s.handle} onPointerDown={(e) => onBegin(e, 'start')} />
       <rect x={x1 + w - 4} y={by - 2} width={7} height={bh + 4} className={s.handle} onPointerDown={(e) => onBegin(e, 'end')} />
-      {knob && (
-        <g className={s.knob} onPointerDown={(e) => onBegin(e, 'knob')}>
-          <title>Drag to set progress manually</title>
-          <rect x={kx - 7} y={by + bh - 2} width={14} height={10} fill="transparent" />
-          <path d={`M${kx} ${by + bh - 1} l4.5 6 h-9 z`} fill="var(--gold)" />
-        </g>
-      )}
       {markers.map((m) => (
         <rect key={m.id} x={m.x - 1} y={by + bh + 2} width={2} height={4} className={s[`mk_${m.tone}`]}>
           <title>{m.title}</title>

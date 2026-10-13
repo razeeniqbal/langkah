@@ -1,0 +1,36 @@
+.wrap { padding: 16px 28px 28px; overflow: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+
+.capture { display: flex; gap: 8px; flex-wrap: wrap; max-width: 1000px; }
+.captureInput { flex: 1; min-width: 240px; }
+.captureProject { width: auto; max-width: 260px; }
+
+.meta { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; font-size: 12.5px; }
+
+.list {
+  list-style: none; margin: 0; padding: 0; max-width: 1000px;
+  border: 1px solid var(--line); border-radius: var(--r-3); background: var(--surface);
+}
+.row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px 8px 14px; min-height: 48px;
+  border-bottom: 1px solid var(--line);
+}
+.row:last-child { border-bottom: 0; }
+.row:hover { background: var(--elev); }
+
+.text {
+  flex: 1; min-width: 0; padding: 6px 0; border: 0; background: none; text-align: left;
+  font-size: 14px; line-height: 1.4; overflow-wrap: anywhere;
+}
+.text:hover { color: var(--gold); }
+.edit { flex: 1; min-width: 0; }
+.project { width: 118px; font-family: var(--font-mono); font-size: 11px; }
+.date { font-size: 11px; width: 52px; text-align: right; }
+
+@media (max-width: 720px) {
+  .wrap { padding: 12px 14px 20px; }
+  .row { flex-wrap: wrap; padding: 10px 12px; }
+  .text, .edit { flex-basis: 100%; }
+  .date { margin-right: auto; text-align: left; }
+  .boardLabel { display: none; }
+}

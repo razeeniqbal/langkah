@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session
 
-from .db import P, get_db
-from .models import Card, PlanItem, Person, Project, ProjectMember, new_id
+from .db import CARD_PROGRESS_SQL, P, get_db
+from .models import Card, Note, PlanItem, Person, Project, ProjectMember, new_id
 from .schemas import (
     CardIn, CardOut, CardPatch,
+    NoteIn, NoteOut, NotePatch, NotePromote,
     PersonIn, PersonOut, PersonPatch,
     PlanItemIn, PlanItemOut, PlanItemPatch,
     ProjectIn, ProjectOut, ProjectPatch,
@@ -133,14 +134,18 @@ def _resolve_project(db: Session, plan_item_id: str | None, project_id: str | No
     return _get(db, Project, project_id).id
 
 
-@router.post("/cards", response_model=CardOut, status_code=201)
-def create_card(body: CardIn, db: Session = DB):
-    data = body.model_dump()
-    data["project_id"] = _resolve_project(db, body.plan_item_id, body.project_id)
+def _new_card(db: Session, data: dict) -> Card:
+    data["project_id"] = _resolve_project(db, data.get("plan_item_id"), data.get("project_id"))
     if data["order"] is None:
         data["order"] = _next_order(db, Card)
     card = Card(id=new_id("c"), **data)
     db.add(card)
+    return card
+
+
+@router.post("/cards", response_model=CardOut, status_code=201)
+def create_card(body: CardIn, db: Session = DB):
+    card = _new_card(db, body.model_dump())
     db.commit()
     return card
 
@@ -161,6 +166,56 @@ def update_card(id: str, body: CardPatch, db: Session = DB):
 def delete_card(id: str, db: Session = DB):
     db.delete(_get(db, Card, id))
     db.commit()
+
+
+# Notes --------------------------------------------------------------------
+@router.get("/notes", response_model=list[NoteOut])
+def list_notes(db: Session = DB):
+    return db.scalars(select(Note).order_by(Note.order.desc(), Note.created_at.desc())).all()
+
+
+@router.post("/notes", response_model=NoteOut, status_code=201)
+def create_note(body: NoteIn, db: Session = DB):
+    if body.project_id:
+        _get(db, Project, body.project_id)
+    # Newest on top: order counts up and the list sorts descending.
+    note = Note(id=new_id("n"), text=body.text.strip(), project_id=body.project_id,
+                order=body.order if body.order is not None else _next_order(db, Note))
+    db.add(note)
+    db.commit()
+    return note
+
+
+@router.patch("/notes/{id}", response_model=NoteOut)
+def update_note(id: str, body: NotePatch, db: Session = DB):
+    note = _get(db, Note, id)
+    data = body.model_dump(exclude_unset=True)
+    if data.get("project_id"):
+        _get(db, Project, data["project_id"])
+    if "text" in data:
+        data["text"] = data["text"].strip()
+    _apply(note, data)
+    db.commit()
+    return note
+
+
+@router.delete("/notes/{id}", status_code=204)
+def delete_note(id: str, db: Session = DB):
+    db.delete(_get(db, Note, id))
+    db.commit()
+
+
+@router.post("/notes/{id}/promote", response_model=CardOut, status_code=201)
+def promote_note(id: str, body: NotePromote, db: Session = DB):
+    """Turn a note into a card and remove the note, in one transaction."""
+    note = _get(db, Note, id)
+    data = body.model_dump()
+    data["title"] = (data["title"] or note.text).strip()[:300]
+    data["project_id"] = data["project_id"] or note.project_id
+    card = _new_card(db, data)
+    db.delete(note)
+    db.commit()
+    return card
 
 
 # People -------------------------------------------------------------------
@@ -230,22 +285,25 @@ def remove_from_project(id: str, project_id: str, db: Session = DB):
     return _person_out(p)
 
 
-# Summary: everything reads the plan_item_progress view ---------------------
+# Summary: progress comes from cards only ---------------------------------
 def _summary(db: Session, project_id: str | None) -> Summary:
+    """Plan items read the plan_item_progress view. Sections roll up their
+    items' cards; projects and the overall figure roll up every card in scope,
+    linked to a plan item or not (points-weighted credit)."""
     where = "WHERE project_id = :pid" if project_id else ""
-    and_ = "AND project_id = :pid" if project_id else ""
+    c_where = "WHERE c.project_id = :pid" if project_id else ""
     args = {"pid": project_id} if project_id else {}
-    weighted = "COALESCE(SUM(days * progress) / NULLIF(SUM(days), 0), 0)"
     items = db.execute(text(
         f"SELECT plan_item_id, project_id, section, progress, effective_mode AS mode, card_count, cards_done "
         f"FROM {P}plan_item_progress {where}"), args).mappings().all()
     sections = db.execute(text(
-        f"SELECT project_id, section, {weighted} AS progress FROM {P}plan_item_progress "
-        f"WHERE NOT milestone {and_} GROUP BY project_id, section"), args).mappings().all()
+        f"SELECT p.project_id, p.section, {CARD_PROGRESS_SQL} AS progress "
+        f"FROM {P}cards c JOIN {P}plan_items p ON p.id = c.plan_item_id {c_where} "
+        f"GROUP BY p.project_id, p.section"), args).mappings().all()
     projects = db.execute(text(
-        f"SELECT project_id, {weighted} AS progress FROM {P}plan_item_progress "
-        f"WHERE NOT milestone {and_} GROUP BY project_id"), args).mappings().all()
-    overall = db.scalar(text(f"SELECT {weighted} FROM {P}plan_item_progress WHERE NOT milestone {and_}"), args)
+        f"SELECT c.project_id, {CARD_PROGRESS_SQL} AS progress FROM {P}cards c {c_where} "
+        f"GROUP BY c.project_id"), args).mappings().all()
+    overall = db.scalar(text(f"SELECT {CARD_PROGRESS_SQL} FROM {P}cards c {c_where}"), args)
     rnd = lambda v: round(float(v or 0), 1)  # noqa: E731
     return Summary(
         items=[{**r, "progress": rnd(r["progress"])} for r in items],
@@ -275,4 +333,5 @@ def export(db: Session = DB):
         "people": [p.model_dump(mode="json", by_alias=True) for p in list_people(db)],
         "planItems": dump(PlanItemOut, list_plan_items(None, db)),
         "cards": dump(CardOut, list_cards(None, db)),
+        "notes": dump(NoteOut, list_notes(db)),
     }

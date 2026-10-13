@@ -148,6 +148,33 @@ class PersonOut(Camel):
     updated_at: datetime
 
 
+# Notes ------------------------------------------------------------------
+class NoteIn(Camel):
+    text: str = Field(min_length=1, max_length=500)
+    project_id: str | None = None
+    order: int | None = None
+
+
+class NotePatch(Camel):
+    text: str | None = Field(default=None, min_length=1, max_length=500)
+    project_id: str | None = None
+    order: int | None = None
+
+
+class NoteOut(Camel):
+    id: str
+    project_id: str | None
+    text: str
+    order: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class NotePromote(CardIn):
+    """Card fields for turning a note into a card; the title defaults to the note text."""
+    title: str | None = Field(default=None, min_length=1, max_length=300)
+
+
 # Summary ----------------------------------------------------------------
 class ItemProgress(Camel):
     plan_item_id: str

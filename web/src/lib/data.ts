@@ -65,8 +65,8 @@ export function useData() {
 export type Data = ReturnType<typeof useData>
 
 function cardMatches(c: Card, f: Filters, me: Person | null, itemById: Map<string, PlanItem>) {
-  if (f.planItemId && c.planItemId !== f.planItemId) return false
-  if (f.assigneeId && (f.assigneeId === 'none' ? c.assigneeId !== null : c.assigneeId !== f.assigneeId)) return false
+  if (f.planItemIds.length && !f.planItemIds.includes(c.planItemId ?? 'none')) return false
+  if (f.assigneeIds.length && !f.assigneeIds.includes(c.assigneeId ?? 'none')) return false
   if (f.myWork && (!me || c.assigneeId !== me.id)) return false
   if (f.hideDone && c.status === 'done') return false
   if (f.search) {
@@ -78,12 +78,12 @@ function cardMatches(c: Card, f: Filters, me: Person | null, itemById: Map<strin
 }
 
 function itemMatches(i: PlanItem, f: Filters, me: Person | null, cards: Card[], progress: number) {
-  if (f.planItemId && i.id !== f.planItemId) return false
-  const who = f.myWork ? me?.id ?? '-' : f.assigneeId
-  if (who) {
-    if (who === 'none') {
-      if (i.ownerId !== null) return false
-    } else if (i.ownerId !== who && !cards.some((c) => c.assigneeId === who)) return false
+  if (f.planItemIds.length && !f.planItemIds.includes(i.id)) return false
+  // An item matches a person when they own it or have a card on it; 'none' = no owner.
+  const who = f.myWork ? [me?.id ?? '-'] : f.assigneeIds
+  if (who.length) {
+    const hit = who.includes(i.ownerId ?? 'none') || cards.some((c) => c.assigneeId !== null && who.includes(c.assigneeId))
+    if (!hit) return false
   }
   if (f.hideDone && progress >= 100) return false
   if (f.search) {

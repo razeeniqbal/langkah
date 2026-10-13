@@ -2,20 +2,20 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Card, PlanItem } from './types'
 
-export type View = 'board' | 'timeline' | 'team'
+export type View = 'board' | 'timeline' | 'team' | 'notes'
 export type Zoom = 'week' | 'month' | 'quarter'
 export type Theme = 'system' | 'light' | 'dark'
 
 export interface Filters {
   search: string
-  planItemId: string | null
-  assigneeId: string | null // 'none' = unassigned
+  planItemIds: string[] // empty = all; 'none' = cards with no plan item
+  assigneeIds: string[] // empty = anyone; 'none' = unassigned
   myWork: boolean
   hideDone: boolean
 }
 
 export type Editor =
-  | { kind: 'card'; id?: string; draft?: Partial<Card> }
+  | { kind: 'card'; id?: string; draft?: Partial<Card>; noteId?: string } // noteId: promoting a note
   | { kind: 'item'; id?: string; draft?: Partial<PlanItem> }
   | { kind: 'project'; id?: string }
 
@@ -33,6 +33,7 @@ interface UI {
   theme: Theme
   zoom: Zoom
   sheet: boolean
+  uiScale: number // whole-app display size (CSS zoom); phones always use 1
   leftWidth: number // px, timeline "Plan item" column
   timeScale: Record<Zoom, number> // multiplier on the zoom's pixels-per-day
   collapsed: Record<string, boolean>
@@ -56,7 +57,11 @@ interface UI {
   dismissToast: (id: number) => void
 }
 
-const noFilters: Filters = { search: '', planItemId: null, assigneeId: null, myWork: false, hideDone: false }
+const noFilters: Filters = { search: '', planItemIds: [], assigneeIds: [], myWork: false, hideDone: false }
+
+/** The one plan item being filtered on, when exactly one is picked (progress strip, new-card default). */
+export const singleItem = (f: Filters): string | null =>
+  f.planItemIds.length === 1 && f.planItemIds[0] !== 'none' ? f.planItemIds[0] : null
 
 // localStorage can be unavailable (private mode); the app must still work.
 const safeStorage = createJSONStorage(() => {
@@ -71,6 +76,18 @@ const safeStorage = createJSONStorage(() => {
   }
 })
 
+export const UI_SCALES = [0.8, 0.9, 1, 1.1]
+const PHONE = '(max-width: 720px)'
+
+/**
+ * The zoom actually applied to #root. Pointer coordinates are in screen pixels,
+ * layout is in zoomed CSS pixels, so drag maths divides screen deltas by this.
+ */
+export function uiZoom(): number {
+  if (typeof window !== 'undefined' && window.matchMedia(PHONE).matches) return 1
+  return useUI.getState().uiScale || 1
+}
+
 let toastSeq = 0
 
 export const useUI = create<UI>()(
@@ -82,6 +99,7 @@ export const useUI = create<UI>()(
       theme: 'dark',
       zoom: 'month',
       sheet: false,
+      uiScale: 0.9,
       leftWidth: 340,
       timeScale: { week: 1, month: 1, quarter: 1 },
       collapsed: {},
@@ -95,7 +113,7 @@ export const useUI = create<UI>()(
       set: (p) => set(p),
       setView: (view) => set({ view }),
       setProject: (projectId) =>
-        set((s) => ({ projectId, filters: { ...s.filters, planItemId: null, assigneeId: null } })),
+        set((s) => ({ projectId, filters: { ...s.filters, planItemIds: [], assigneeIds: [] } })),
       setFilter: (k, v) => set((s) => ({ filters: { ...s.filters, [k]: v } })),
       clearFilters: () => set((s) => ({ filters: { ...noFilters, myWork: s.filters.myWork } })),
       toggleSection: (key) => set((s) => ({ collapsed: { ...s.collapsed, [key]: !s.collapsed[key] } })),
@@ -112,6 +130,11 @@ export const useUI = create<UI>()(
     {
       name: 'workbench:ui',
       storage: safeStorage,
+      // Older saved filters had single-value fields; always start from a complete set.
+      merge: (saved, current) => {
+        const p = (saved ?? {}) as Partial<UI>
+        return { ...current, ...p, filters: { ...noFilters, myWork: !!p.filters?.myWork, hideDone: !!p.filters?.hideDone } }
+      },
       partialize: (s) => ({
         view: s.view,
         projectId: s.projectId,
@@ -119,6 +142,7 @@ export const useUI = create<UI>()(
         theme: s.theme,
         zoom: s.zoom,
         sheet: s.sheet,
+        uiScale: s.uiScale,
         leftWidth: s.leftWidth,
         timeScale: s.timeScale,
         collapsed: s.collapsed,

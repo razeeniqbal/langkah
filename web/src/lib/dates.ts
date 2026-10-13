@@ -12,8 +12,9 @@ export function fromDay(n: number): string {
   return new Date(n * DAY).toISOString().slice(0, 10)
 }
 
-export function todayISO(): string {
-  const d = new Date()
+/** Local calendar date (YYYY-MM-DD) of now, or of a timestamp. */
+export function todayISO(at?: string): string {
+  const d = at ? new Date(at) : new Date()
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }

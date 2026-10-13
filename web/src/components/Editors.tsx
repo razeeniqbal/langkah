@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
   useCreateCard, useCreateItem, useDeleteCard, useDeleteItem, useDeleteProject,
-  useSaveProject, useUpdateCard, useUpdateItem,
+  useNoteOps, useSaveProject, useUpdateCard, useUpdateItem,
 } from '../lib/api'
 import { addDays, short, span, todayISO } from '../lib/dates'
 import { assigneeGroups, isLate, type Data } from '../lib/data'
@@ -22,7 +22,7 @@ export function Drawer({ d }: { d: Data }) {
   return (
     <div className={s.overlay} onMouseDown={(e) => e.target === e.currentTarget && close()}>
       <div ref={panel} className={s.panel} role="dialog" aria-modal="true">
-        {editor.kind === 'card' && <CardEditor key={key} d={d} id={editor.id} draft={editor.draft} />}
+        {editor.kind === 'card' && <CardEditor key={key} d={d} id={editor.id} draft={editor.draft} noteId={editor.noteId} />}
         {editor.kind === 'item' && <ItemEditor key={key} d={d} id={editor.id} draft={editor.draft} />}
         {editor.kind === 'project' && <ProjectEditor key={key} d={d} id={editor.id} />}
       </div>
@@ -105,7 +105,7 @@ function PersonSelect({ d, projectId, value, onChange, label }: {
 }
 
 // Card ------------------------------------------------------------------------
-function CardEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Card> }) {
+function CardEditor({ d, id, draft, noteId }: { d: Data; id?: string; draft?: Partial<Card>; noteId?: string }) {
   const existing = id ? d.cards.find((c) => c.id === id) : undefined
   const [f, setF] = useState<Partial<Card>>(() => existing ?? {
     title: '', status: 'todo', points: 1, due: null, notes: '', assigneeId: null, planItemId: null, ...draft,
@@ -114,6 +114,7 @@ function CardEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Ca
   const create = useCreateCard()
   const update = useUpdateCard()
   const del = useDeleteCard()
+  const notes = useNoteOps()
   const ui = useUI()
   const [error, setError] = useState<string | null>(null)
   const item = f.planItemId ? d.itemById.get(f.planItemId) : undefined
@@ -129,23 +130,24 @@ function CardEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Ca
       assigneeId: f.assigneeId ?? null, status: f.status, due: f.due || null, points: f.points, notes: f.notes ?? '',
     }
     if (existing) update.mutate({ id: existing.id, ...body })
+    else if (noteId) notes.promote.mutate({ id: noteId, ...body })
     else create.mutate(body)
     ui.close()
   }
 
   return (
     <form className={s.form} onSubmit={submit} onKeyDown={submitOnCtrlEnter}>
-      <Head kicker={existing ? `Card · ${d.projectById.get(existing.projectId)?.code ?? ''}` : 'New card'}
-        title={existing ? existing.title : 'New card'}>
+      <Head kicker={existing ? `Card · ${d.projectById.get(existing.projectId)?.code ?? ''}` : noteId ? 'Note → card' : 'New card'}
+        title={existing ? existing.title : noteId ? 'Send to board' : 'New card'}>
         {existing && isLate(existing, d.today) && <span className="tag late">Late</span>}
       </Head>
       <div className={s.body}>
         <Field label="Title">
           <input className={`input ${s.titleInput}`} data-autofocus value={f.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
         </Field>
-        <Field label="Plan item" hint={item ? <ItemHint d={d} item={item} /> : 'Unlinked cards do not count toward any plan item.'}>
+        <Field label="Plan item" hint={item ? <ItemHint d={d} item={item} /> : 'Fine for work outside the plan; it still counts toward the project %.'}>
           <select className="select" value={f.planItemId ?? ''} onChange={(e) => set({ planItemId: e.target.value || null })}>
-            <option value="">— Unlinked —</option>
+            <option value="">No plan item (not on the timeline)</option>
             <ItemOptions d={d} />
           </select>
         </Field>
@@ -182,7 +184,7 @@ function CardEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Ca
           <textarea className="textarea" rows={5} value={f.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
         </Field>
       </div>
-      <Foot saveLabel={existing ? 'Save' : 'Create card'} error={error}
+      <Foot saveLabel={existing ? 'Save' : noteId ? 'Add to board' : 'Create card'} error={error}
         onDelete={existing ? () => { del.mutate(existing.id); ui.close() } : undefined} />
     </form>
   )
@@ -219,7 +221,6 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
     () => [...new Set(d.items.filter((i) => i.projectId === f.projectId).map((i) => i.section).filter(Boolean))],
     [d.items, f.projectId],
   )
-  const manualShown = cards.length === 0 || f.progressMode === 'manual'
 
   if (id && !existing) return <Head kicker="Plan item" title="This plan item no longer exists" />
 
@@ -229,8 +230,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
     if (!f.start || (!f.milestone && (!f.end || f.end < f.start))) return setError('End must be on or after start.')
     const body = {
       title: f.title.trim(), projectId: f.projectId, section: (f.section ?? '').trim(), ownerId: f.ownerId ?? null,
-      start: f.start, end: f.milestone ? f.start : f.end, milestone: !!f.milestone, progressMode: f.progressMode,
-      manualProgress: f.manualProgress ?? 0, notes: f.notes ?? '',
+      start: f.start, end: f.milestone ? f.start : f.end, milestone: !!f.milestone, notes: f.notes ?? '',
     }
     if (existing) update.mutate({ id: existing.id, ...body })
     else create.mutate(body)
@@ -245,7 +245,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
         {existing && (
           <div className={s.progress}>
             <div>
-              <div className="mono muted">Progress · {progress?.mode === 'auto' ? `from ${cards.length} cards` : 'manual'}</div>
+              <div className="mono muted">Progress · {cards.length ? `from ${cards.length} card${cards.length === 1 ? '' : 's'}` : 'no cards yet'}</div>
               <ProgressBar value={progress?.progress ?? 0} />
             </div>
             <strong><Counter value={progress?.progress ?? 0} /></strong>
@@ -283,21 +283,6 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
           <input type="checkbox" checked={!!f.milestone} onChange={(e) => set({ milestone: e.target.checked })} />
           <span>Milestone (a single date, drawn as a diamond)</span>
         </label>
-        <Field label="Progress mode"
-          hint={f.progressMode === 'auto'
-            ? cards.length ? 'Weighted by card points: In progress 50%, Review 75%, Done 100%.' : 'No cards yet, so the manual value is used.'
-            : 'Typed by hand; linked cards are ignored.'}>
-          <div className="seg" role="group" aria-label="Progress mode">
-            <button type="button" aria-pressed={f.progressMode === 'auto'} onClick={() => set({ progressMode: 'auto' })}>Auto from cards</button>
-            <button type="button" aria-pressed={f.progressMode === 'manual'} onClick={() => set({ progressMode: 'manual' })}>Manual</button>
-          </div>
-        </Field>
-        {manualShown && (
-          <Field label={`Manual progress · ${f.manualProgress ?? 0}%`}>
-            <input type="range" min={0} max={100} step={5} value={f.manualProgress ?? 0} className={s.range}
-              onChange={(e) => set({ manualProgress: Number(e.target.value) })} />
-          </Field>
-        )}
         <Field label="Notes">
           <textarea className="textarea" rows={3} value={f.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
         </Field>
@@ -306,7 +291,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
           <div className={s.cards}>
             <div className={s.cardsHead}>
               <span className="mono muted">Linked cards · {cards.length}</span>
-              <button type="button" className="btn ghost" onClick={() => { ui.setFilter('planItemId', existing.id); ui.setView('board'); ui.close() }}>
+              <button type="button" className="btn ghost" onClick={() => { ui.setFilter('planItemIds', [existing.id]); ui.setView('board'); ui.close() }}>
                 Open on board
               </button>
             </div>
@@ -338,7 +323,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
       </div>
       <Foot saveLabel={existing ? 'Save' : 'Create plan item'} error={error}
         deleteTitle="Its cards stay on the board, unlinked"
-        onDelete={existing ? () => { del.mutate(existing.id); if (ui.filters.planItemId === existing.id) ui.setFilter('planItemId', null); ui.close() } : undefined} />
+        onDelete={existing ? () => { del.mutate(existing.id); ui.setFilter('planItemIds', ui.filters.planItemIds.filter((x) => x !== existing.id)); ui.close() } : undefined} />
     </form>
   )
 }

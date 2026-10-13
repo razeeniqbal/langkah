@@ -38,7 +38,7 @@ The link that matters: a card moves across the board, and its plan item's progre
 
 ## Functional requirements
 
-The app has three views (Board, Timeline, Team) scoped by the selected project, or by All projects. Must = v1, Should = v1 if time allows, Could = later.
+The app has four views (Board, Timeline, Team, Notes) scoped by the selected project, or by All projects. Must = v1, Should = v1 if time allows, Could = later.
 
 ### Projects and navigation
 
@@ -73,7 +73,7 @@ The app has three views (Board, Timeline, Team) scoped by the selected project, 
 | T1 | Rows grouped by project (All projects only) then section, each with a summary bar | Must |
 | T2 | Drag a bar to move it, drag either end to change dates | Must |
 | T3 | Milestones as diamonds on a single date, draggable | Must |
-| T4 | Progress fill from linked cards; a manual knob only when the item has no cards or is set to manual | Must |
+| T4 | Progress fill from linked cards only (0% with no cards); no manual knob | Must |
 | T5 | Zoom levels: Week, Month, Quarter; Today button scrolls to today | Must |
 | T6 | Today line, weekend shading, behind schedule items flagged | Must |
 | T7 | Each row shows owner monogram and a card counter (done of total) that opens the filtered board | Must |
@@ -93,21 +93,30 @@ The app has three views (Board, Timeline, Team) scoped by the selected project, 
 | M6 | No roles or member types | Must |
 | M7 | Razeen is marked as Me; a My work toggle filters every view to his cards and items | Must |
 
+### Notes (pending items)
+
+| ID | Requirement | Priority |
+|---|---|---|
+| N1 | Capture a pending item as one line of text, optionally filed under a project | Must |
+| N2 | A project shows its own notes plus unfiled ones; All projects shows every note, newest first | Must |
+| N3 | Edit a note's text inline, change or clear its project, delete it (second click confirms) | Must |
+| N4 | Send a note to the board: opens the card editor prefilled with the note text; saving creates the card and removes the note in one transaction (`POST /notes/{id}/promote`) | Must |
+
 ### Editors and filters
 
 | ID | Requirement | Priority |
 |---|---|---|
 | E1 | Card editor: title, linked plan item, project (when unlinked), assignee, status, due date, effort (1, 2, 3, 5, 8), notes | Must |
-| E2 | Plan item editor: title, project, section, owner, start, end, milestone flag, progress mode, notes, list of linked cards with Add card | Must |
+| E2 | Plan item editor: title, project, section, owner, start, end, milestone flag, notes, read-only progress from cards, list of linked cards with Add card | Must |
 | E3 | Assignee dropdown lists the project's team first, then other people | Must |
 | E4 | Deleting a plan item keeps its cards on the board, unlinked | Must |
 | E5 | Delete actions ask for a second click to confirm | Must |
-| E6 | Filters: search, plan item, assignee, My work, Hide done | Must |
+| E6 | Filters: search, plan item (multi-select, incl. No plan item), assignee (multi-select, incl. Unassigned), My work, Hide done; several values match any of them | Must |
 | E7 | Keyboard: Esc closes editors, Enter opens a focused card, N creates a new card | Should |
 
 ## Data model and progress rules
 
-Four stored collections; sections are a text field on plan items, not their own table. Dates are ISO strings (YYYY-MM-DD) in local time; ids are strings.
+Five stored collections; sections are a text field on plan items, not their own table. Dates are ISO strings (YYYY-MM-DD) in local time; ids are strings.
 
 | Entity | Fields |
 |---|---|
@@ -115,8 +124,9 @@ Four stored collections; sections are a text field on plan items, not their own 
 | plan_items | id, projectId, section, title, ownerId, start, end, milestone (bool), progressMode (auto or manual), manualProgress (0 to 100), notes, order, updatedAt |
 | cards | id, planItemId (nullable), projectId (used when unlinked), title, assigneeId, status, due, points, notes, order, updatedAt |
 | people | id, name, projectIds (list), isMe (bool), updatedAt |
+| notes | id, projectId (nullable; cleared when the project is deleted), text, order, createdAt, updatedAt |
 
-**Progress of a plan item.** When the item has linked cards and progressMode is auto, progress is the effort weighted credit of its cards:
+**Progress comes only from cards.** Plan items on the timeline are not all of the work: a card may have no plan item and still counts toward its project. The progress of any set of cards is its effort weighted credit:
 
 ```
 progress = Σ(points_i × credit(status_i)) / Σ points_i
@@ -130,9 +140,9 @@ progress = Σ(points_i × credit(status_i)) / Σ points_i
 | Review | 75% |
 | Done | 100% |
 
-Otherwise progress = manualProgress. Dragging the knob on the timeline sets progressMode to manual.
+A plan item's progress is the credit of its linked cards, or 0% when it has none. `manualProgress` and `progressMode` stay in the data for old imports but are ignored (changed 14 Oct 2026; previously a typed-in % or knob applied when an item had no cards).
 
-**Rollups.** A section's and a project's progress are duration weighted averages of their plan items (days × progress / total days); milestones are excluded.
+**Rollups.** A section's progress is the credit of the cards linked to its plan items. A project's progress, and the overall Complete figure, is the credit of every card in scope, linked to a plan item or not.
 
 **Lateness.** A card is late when due < today and status is not Done. A plan item is behind when end < today and progress < 100%.
 

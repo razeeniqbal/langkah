@@ -66,26 +66,31 @@ def test_moving_card_updates_progress(c):
     assert item_progress(c, it["id"])["progress"] == 100
 
 
-def test_manual_progress_without_cards_and_manual_mode(c):
+def test_plan_item_progress_only_from_cards(c):
     p = mk_project(c)
-    it = mk_item(c, p["id"], manualProgress=40)
-    assert item_progress(c, it["id"])["progress"] == 40
-    assert item_progress(c, it["id"])["mode"] == "manual"
-    mk_card(c, planItemId=it["id"], status="todo")
-    assert item_progress(c, it["id"])["progress"] == 0  # auto once a card is linked
-    c.patch(f"/api/plan_items/{it['id']}", json={"progressMode": "manual"})
-    assert item_progress(c, it["id"])["progress"] == 40
+    # A typed-in % (old data, prototype import) is ignored.
+    it = mk_item(c, p["id"], manualProgress=40, progressMode="manual")
+    assert item_progress(c, it["id"])["progress"] == 0
+    mk_card(c, planItemId=it["id"], status="review", points=2)
+    assert item_progress(c, it["id"])["progress"] == 75
+    assert item_progress(c, it["id"])["mode"] == "auto"
 
 
-def test_rollups_are_duration_weighted_and_skip_milestones(c):
+def test_rollups_come_from_cards_including_unlinked(c):
     p = mk_project(c)
-    mk_item(c, p["id"], start="2026-10-01", end="2026-10-10", manualProgress=100)  # 10 days
-    mk_item(c, p["id"], start="2026-10-01", end="2026-10-30", manualProgress=0)    # 30 days
-    mk_item(c, p["id"], start="2026-10-05", end="2026-10-05", milestone=True, manualProgress=0)
+    a = mk_item(c, p["id"], section="A", manualProgress=100)
+    b = mk_item(c, p["id"], section="B")
+    mk_card(c, planItemId=a["id"], status="done", points=3)   # A: 3/3
+    mk_card(c, planItemId=b["id"], status="todo", points=1)   # B: 0/1
+    mk_card(c, projectId=p["id"], status="doing", points=5)   # unlinked: 2.5/5
     s = c.get(f"/api/projects/{p['id']}/summary").json()
-    assert s["projects"][0]["progress"] == 25
-    assert s["sections"][0]["progress"] == 25
-    assert s["overall"] == 25
+    sections = {x["section"]: x["progress"] for x in s["sections"]}
+    assert sections == {"A": 100, "B": 0}
+    assert s["projects"][0]["progress"] == pytest.approx(round(100 * 5.5 / 9, 1))
+    assert s["overall"] == s["projects"][0]["progress"]
+    other = mk_project(c, "OPS", "Ops")
+    mk_card(c, projectId=other["id"], status="done", points=8)
+    assert c.get("/api/summary").json()["overall"] == pytest.approx(round(100 * 13.5 / 17, 1))
 
 
 def test_delete_plan_item_unlinks_cards(c):
@@ -148,9 +153,54 @@ def test_import_prototype_field_names(c):
     with SessionLocal() as db:
         counts = import_data(db, raw)
         db.commit()
-    assert counts == {"projects": 1, "people": 2, "planItems": 1, "cards": 1}
+    assert counts == {"projects": 1, "people": 2, "planItems": 1, "cards": 1, "notes": 0}
     item = c.get("/api/plan_items").json()[0]
     assert item["ownerId"] == "u2" and item["manualProgress"] == 30
     card = c.get("/api/cards").json()[0]
     assert card["planItemId"] == "x1" and card["status"] == "doing"
     assert [p["isMe"] for p in c.get("/api/people").json()] == [True, False]
+
+
+def test_notes_crud_and_promote_to_card(c):
+    p = mk_project(c)
+    it = mk_item(c, p["id"])
+    r = c.post("/api/notes", json={"text": "  Check cost tables with finance  ", "projectId": p["id"]})
+    assert r.status_code == 201, r.text
+    n = r.json()
+    assert n["text"] == "Check cost tables with finance"
+    loose = c.post("/api/notes", json={"text": "Unfiled idea"}).json()
+    assert loose["projectId"] is None
+    # Newest first.
+    assert [x["id"] for x in c.get("/api/notes").json()] == [loose["id"], n["id"]]
+
+    r = c.patch(f"/api/notes/{loose['id']}", json={"text": "Filed idea", "projectId": p["id"]})
+    assert r.json()["projectId"] == p["id"] and r.json()["text"] == "Filed idea"
+
+    # Promote: becomes a linked card (title defaults to the note text) and the note is gone.
+    r = c.post(f"/api/notes/{n['id']}/promote", json={"planItemId": it["id"], "status": "todo", "points": 3})
+    assert r.status_code == 201, r.text
+    card = r.json()
+    assert (card["title"], card["planItemId"], card["projectId"], card["points"]) == (
+        "Check cost tables with finance", it["id"], p["id"], 3)
+    assert [x["id"] for x in c.get("/api/notes").json()] == [loose["id"]]
+    assert item_progress(c, it["id"])["cardCount"] == 1
+
+    # Unlinked promote uses the note's project; a custom title wins.
+    card2 = c.post(f"/api/notes/{loose['id']}/promote", json={"title": "Custom"}).json()
+    assert (card2["title"], card2["projectId"], card2["planItemId"]) == ("Custom", p["id"], None)
+    assert c.get("/api/notes").json() == []
+
+
+def test_note_promote_needs_a_project(c):
+    n = c.post("/api/notes", json={"text": "Nowhere"}).json()
+    r = c.post(f"/api/notes/{n['id']}/promote", json={})
+    assert r.status_code == 422
+    assert len(c.get("/api/notes").json()) == 1  # nothing lost
+
+
+def test_deleting_project_unfiles_its_notes(c):
+    p = mk_project(c)
+    n = c.post("/api/notes", json={"text": "Keep me", "projectId": p["id"]}).json()
+    assert c.delete(f"/api/projects/{p['id']}").status_code == 204
+    left = c.get("/api/notes").json()
+    assert [(x["id"], x["projectId"]) for x in left] == [(n["id"], None)]

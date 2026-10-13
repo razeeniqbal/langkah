@@ -26,7 +26,7 @@ export function Team({ d }: { d: Data }) {
   const maxPoints = Math.max(8, ...stats.map((x) => x.points))
 
   const showCards = (p: Person) => {
-    ui.setFilter('assigneeId', p.id)
+    ui.setFilter('assigneeIds', [p.id])
     ui.setView('board')
   }
 

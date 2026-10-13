@@ -4,13 +4,31 @@ import { CommandPalette } from './components/CommandPalette'
 import { Drawer } from './components/Editors'
 import { Header } from './components/Header'
 import { Login } from './components/Login'
+import { Notes } from './components/Notes'
 import { Sidebar } from './components/Sidebar'
 import { Team } from './components/Team'
 import { Timeline } from './components/Timeline'
 import { Empty, Icon, Toasts } from './components/ui'
 import { useData } from './lib/data'
-import { useUI } from './lib/store'
+import { singleItem, uiZoom, useUI } from './lib/store'
 import s from './App.module.css'
+
+/** Whole-app display size: CSS zoom on #root (it still fills the window). */
+function useDisplaySize() {
+  const scale = useUI((x) => x.uiScale)
+  useEffect(() => {
+    const root = document.getElementById('root')
+    if (!root) return
+    const mq = window.matchMedia('(max-width: 720px)')
+    const apply = () => {
+      const k = uiZoom()
+      root.style.zoom = k === 1 ? '' : String(k)
+    }
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [scale])
+}
 
 function useTheme() {
   const theme = useUI((x) => x.theme)
@@ -45,11 +63,12 @@ function useShortcuts(defaultProjectId: string | null) {
       const k = e.key.toLowerCase()
       if (k === 'n' && defaultProjectId) {
         e.preventDefault()
-        const planItemId = ui.filters.planItemId
+        const planItemId = singleItem(ui.filters)
         ui.open({ kind: 'card', draft: { projectId: defaultProjectId, planItemId, status: 'todo' } })
       } else if (k === '1') ui.setView('board')
       else if (k === '2') ui.setView('timeline')
       else if (k === '3') ui.setView('team')
+      else if (k === '4') ui.setView('notes')
       else if (k === '/') {
         e.preventDefault()
         document.getElementById('wb-search')?.focus()
@@ -62,6 +81,7 @@ function useShortcuts(defaultProjectId: string | null) {
 
 export function App() {
   useTheme()
+  useDisplaySize()
   const d = useData()
   useShortcuts(d.defaultProjectId)
   const view = useUI((x) => x.view)
@@ -90,6 +110,8 @@ export function App() {
             <Board d={d} />
           ) : view === 'timeline' ? (
             <Timeline d={d} />
+          ) : view === 'notes' ? (
+            <Notes d={d} />
           ) : (
             <Team d={d} />
           )}

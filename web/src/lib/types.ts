@@ -49,6 +49,15 @@ export interface Card {
   updatedAt: string
 }
 
+export interface Note {
+  id: string
+  projectId: string | null
+  text: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Person {
   id: string
   name: string

@@ -90,3 +90,17 @@ class Card(Base):
     notes: Mapped[str] = mapped_column(Text, default="")
     order: Mapped[int] = mapped_column("sort_order", Integer, default=0)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+class Note(Base):
+    """A loose pending item, captured before it is shaped into a card."""
+    __tablename__ = "notes"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    # Optional: a note can be filed under a project before it becomes a card.
+    project_id: Mapped[str | None] = mapped_column(
+        ForeignKey(fk("projects"), ondelete="SET NULL"), nullable=True, index=True
+    )
+    text: Mapped[str] = mapped_column(String(500))
+    order: Mapped[int] = mapped_column("sort_order", Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
