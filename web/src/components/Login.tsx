@@ -7,11 +7,12 @@ export function Login() {
   const [pw, setPw] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const viewOnly = useUI((x) => x.viewOnlyAvailable)
+  const reason = useUI((x) => x.signedOutReason)
   useEffect(() => { loadSession().catch(() => {}) }, [])
   const enter = async (path: string, body?: unknown) => {
     await api.post(path, body)
     await loadSession()
-    useUI.getState().set({ authNeeded: false })
+    useUI.getState().set({ authNeeded: false, signedOutReason: null })
     refetchAll()
   }
   return (
@@ -37,6 +38,7 @@ export function Login() {
           <h1 style={{ margin: 0, fontSize: 22, letterSpacing: '-0.02em' }}>Sign in</h1>
           <p className="muted" style={{ margin: '4px 0 0' }}>Every step moves work forward.</p>
         </div>
+        {reason && <p className="muted" style={{ margin: 0, fontSize: 13 }}>{reason}</p>}
         <label style={{ display: 'grid', gap: 6 }}>
           <span className="mono muted">Password</span>
           <input className="input" type="password" autoFocus value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" />

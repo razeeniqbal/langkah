@@ -25,6 +25,8 @@ services:
       WORKBENCH_PASSWORD: ${WORKBENCH_PASSWORD:-}
       WORKBENCH_SECRET: ${WORKBENCH_SECRET:-change-me}
       WORKBENCH_VIEW_ONLY: ${WORKBENCH_VIEW_ONLY:-1}
+      WORKBENCH_IDLE_MINUTES: ${WORKBENCH_IDLE_MINUTES:-30}
+      WORKBENCH_LOGIN_EACH_LOAD: ${WORKBENCH_LOGIN_EACH_LOAD:-1}
     ports:
       # Loopback only by default; expose on the tailnet with `tailscale serve`.
       - "${WORKBENCH_BIND:-127.0.0.1}:${WORKBENCH_PORT:-8080}:8000"

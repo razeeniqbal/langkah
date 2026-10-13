@@ -230,23 +230,39 @@ export function usePeopleOps() {
   }
 }
 
-export interface AuthStatus { required: boolean; ok: boolean; role: 'edit' | 'view' | null; viewOnly: boolean }
+export interface AuthStatus {
+  required: boolean; ok: boolean; role: 'edit' | 'view' | null; viewOnly: boolean
+  idleMinutes: number; loginEachLoad: boolean
+}
 
 /** Reads the session from the server and mirrors it in the UI store. */
 export async function loadSession() {
   const st = await api.get<AuthStatus>('/auth/status')
   useUI.getState().set({
-    role: st.role ?? 'edit', authRequired: st.required, viewOnlyAvailable: st.viewOnly,
+    role: st.role ?? 'edit', authRequired: st.required, viewOnlyAvailable: st.viewOnly, idleMinutes: st.idleMinutes,
     ...(st.ok ? {} : { authNeeded: true }),
   })
   return st
 }
 
 /** Drop the session and go back to the sign-in screen. */
-export async function signOut() {
-  await api.post('/auth/logout')
+export async function signOut(reason: string | null = null) {
+  await api.post('/auth/logout').catch(() => {})
   queryClient.clear()
-  useUI.getState().set({ authNeeded: true, editor: null, palette: false })
+  useUI.getState().set({ authNeeded: true, editor: null, palette: false, signedOutReason: reason })
+}
+
+/**
+ * Before the app first renders: with "sign in on every load" on, a refresh or
+ * new tab ends the current session, so the password is asked for again.
+ */
+export async function startSession() {
+  try {
+    const st = await api.get<AuthStatus>('/auth/status')
+    if (st.required && st.loginEachLoad && st.ok) await api.post('/auth/logout')
+  } catch {
+    /* the app shows its own error if the API is down */
+  }
 }
 
 export const refetchAll = () => Promise.all(ALL.map((k) => queryClient.invalidateQueries({ queryKey: [k] })))

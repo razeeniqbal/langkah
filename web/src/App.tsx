@@ -9,10 +9,43 @@ import { Sidebar } from './components/Sidebar'
 import { Team } from './components/Team'
 import { Timeline } from './components/Timeline'
 import { Empty, Icon, Toasts } from './components/ui'
-import { loadSession } from './lib/api'
+import { loadSession, signOut } from './lib/api'
 import { useData } from './lib/data'
 import { singleItem, uiZoom, useUI } from './lib/store'
 import s from './App.module.css'
+
+/**
+ * Idle sign-out: after idleMinutes with no keyboard or pointer activity, go back
+ * to the sign-in screen. While active, ping the server now and then so the
+ * session cookie (which also expires when idle) keeps sliding.
+ */
+function useIdleSignOut() {
+  const minutes = useUI((x) => x.idleMinutes)
+  const required = useUI((x) => x.authRequired)
+  const signedIn = useUI((x) => !x.authNeeded)
+  useEffect(() => {
+    if (!required || !signedIn || !minutes) return
+    const limit = minutes * 60_000
+    let last = Date.now()
+    let lastPing = Date.now()
+    const active = () => {
+      last = Date.now()
+      if (last - lastPing > Math.min(5 * 60_000, limit / 3)) {
+        lastPing = last
+        loadSession().catch(() => {})
+      }
+    }
+    const events = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'] as const
+    events.forEach((e) => window.addEventListener(e, active, { passive: true }))
+    const t = window.setInterval(() => {
+      if (Date.now() - last >= limit) signOut(`Signed out after ${minutes} minute${minutes === 1 ? '' : 's'} without activity.`)
+    }, 15_000)
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, active))
+      window.clearInterval(t)
+    }
+  }, [minutes, required, signedIn])
+}
 
 /** Whole-app display size: CSS zoom on #root (it still fills the window). */
 function useDisplaySize() {
@@ -84,6 +117,7 @@ export function App() {
   useTheme()
   useDisplaySize()
   useEffect(() => { loadSession().catch(() => {}) }, [])
+  useIdleSignOut()
   const d = useData()
   useShortcuts(d.defaultProjectId)
   const view = useUI((x) => x.view)

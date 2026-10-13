@@ -44,6 +44,8 @@ interface UI {
   role: 'edit' | 'view' // 'view' = signed in with the View only button
   authRequired: boolean // a password is set on the server
   viewOnlyAvailable: boolean
+  idleMinutes: number // 0 = no idle sign-out
+  signedOutReason: string | null // shown on the sign-in screen
   toasts: Toast[]
   settling: string | null // id of the card that just landed in a column
 
@@ -116,6 +118,8 @@ export const useUI = create<UI>()(
       role: 'edit',
       authRequired: false,
       viewOnlyAvailable: false,
+      idleMinutes: 0,
+      signedOutReason: null,
       toasts: [],
       settling: null,
 

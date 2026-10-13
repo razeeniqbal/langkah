@@ -43,7 +43,7 @@ The app listens on `127.0.0.1:8080`. To reach it from your other devices over Ta
 tailscale serve --bg 8080
 ```
 
-Set `WORKBENCH_PASSWORD` in `.env` if you also want a login screen; leave it empty to rely on Tailscale alone. With a password set, the sign-in screen also has a **View only** button: anyone who can reach the app can read everything but change nothing. Set `WORKBENCH_VIEW_ONLY=0` to remove it.
+Set `WORKBENCH_PASSWORD` in `.env` if you also want a login screen; leave it empty to rely on Tailscale alone. With a password set, the sign-in screen also has a **View only** button: anyone who can reach the app can read everything but change nothing. Set `WORKBENCH_VIEW_ONLY=0` to remove it. Sessions end when the browser closes, after `WORKBENCH_IDLE_MINUTES` without activity (default 30), and, with `WORKBENCH_LOGIN_EACH_LOAD=1` (default), on every refresh or new tab.
 
 ## Deploy to Vercel
 

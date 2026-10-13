@@ -212,13 +212,16 @@ def locked(c, monkeypatch):
     from app import auth
     monkeypatch.setattr(auth, "PASSWORD", "s3cret")
     monkeypatch.setattr(auth, "VIEW_ONLY", True)
+    monkeypatch.setattr(auth, "IDLE_SECONDS", 30 * 60)
+    monkeypatch.setattr(auth, "LOGIN_EACH_LOAD", True)
     c.cookies.clear()
     return c
 
 
 def test_password_required_when_set(locked):
     assert locked.get("/api/projects").status_code == 401
-    assert locked.get("/api/auth/status").json() == {"required": True, "ok": False, "role": None, "viewOnly": True}
+    assert locked.get("/api/auth/status").json() == {
+        "required": True, "ok": False, "role": None, "viewOnly": True, "idleMinutes": 30, "loginEachLoad": True}
     assert locked.post("/api/auth/login", json={"password": "nope"}).status_code == 401
 
 
@@ -261,3 +264,29 @@ def test_view_only_can_be_turned_off(locked, monkeypatch):
     monkeypatch.setattr(auth, "VIEW_ONLY", False)
     assert locked.post("/api/auth/view").status_code == 404
     assert locked.get("/api/auth/status").json()["viewOnly"] is False
+
+
+def test_session_expires_when_idle_and_slides_with_activity(locked, monkeypatch):
+    from app import auth
+    now = [1_000_000.0]
+    monkeypatch.setattr(auth.time, "time", lambda: now[0])
+    r = locked.post("/api/auth/login", json={"password": "s3cret"})
+    assert "max-age" not in r.headers["set-cookie"].lower()  # ends when the browser closes
+    now[0] += 20 * 60
+    assert locked.get("/api/projects").status_code == 200  # activity restamps the cookie
+    now[0] += 20 * 60  # 40 min since login, 20 since the last request
+    assert locked.get("/api/projects").status_code == 200
+    now[0] += 31 * 60  # idle past the limit
+    assert locked.get("/api/projects").status_code == 401
+    assert locked.get("/api/auth/status").json()["ok"] is False
+
+
+def test_tampered_or_old_cookie_is_rejected(locked):
+    from app import auth
+    locked.post("/api/auth/login", json={"password": "s3cret"})
+    good = locked.cookies.get(auth.COOKIE)
+    role, ts, sig = good.split(".")
+    locked.cookies.set(auth.COOKIE, f"edit.{int(ts) + 999}.{sig}")  # moved the clock
+    assert locked.get("/api/projects").status_code == 401
+    locked.cookies.set(auth.COOKIE, sig)  # pre-change cookie format
+    assert locked.get("/api/projects").status_code == 401

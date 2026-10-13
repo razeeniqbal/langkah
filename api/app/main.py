@@ -49,6 +49,7 @@ async def require_login(request: Request, call_next):
         try_init_db()  # the database may be reachable now
         if db_error:
             return JSONResponse({"detail": db_error}, status_code=503)
+    role = None
     if path.startswith("/api/") and not path.startswith("/api/auth/"):
         role = auth.role_of(request)
         if role is None:
@@ -56,7 +57,11 @@ async def require_login(request: Request, call_next):
         # View-only sessions can read everything and change nothing.
         if role == "view" and request.method not in auth.READ_METHODS:
             return JSONResponse({"detail": "view only: sign in with the password to make changes"}, status_code=403)
-    return await call_next(request)
+    response = await call_next(request)
+    # Activity keeps the session alive: restamp the cookie so the idle limit slides.
+    if role and auth.PASSWORD:
+        auth.set_session(request, response, role)
+    return response
 
 
 class RestoreApiPrefix:

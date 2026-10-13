@@ -9,12 +9,12 @@ import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/600.css'
 import './styles/global.css'
 import { App } from './App'
-import { queryClient } from './lib/api'
+import { queryClient, startSession } from './lib/api'
 
-createRoot(document.getElementById('root')!).render(
+startSession().then(() => createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <App />
     </QueryClientProvider>
   </StrictMode>,
-)
+))

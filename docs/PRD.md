@@ -201,7 +201,7 @@ Build it on the stack Razeen already runs: a React and Vite front end talking to
 | API | FastAPI, Pydantic models | Typed, matches the data model above |
 | Database | PostgreSQL, own schema (e.g. workbench) | Progress rollups as SQL views |
 | Hosting | Docker Compose on the home server, Tailscale for remote access | Private, single user |
-| Auth | Single user: one password signs in to edit; a View only button gives read-only access without a password (the API rejects every write from it; `WORKBENCH_VIEW_ONLY=0` turns it off) | No accounts needed in v1 |
+| Auth | Single user: one password signs in to edit; a View only button gives read-only access without a password (the API rejects every write from it; `WORKBENCH_VIEW_ONLY=0` turns it off). Sessions end on browser close, after 30 idle minutes (`WORKBENCH_IDLE_MINUTES`), and on every page load (`WORKBENCH_LOGIN_EACH_LOAD`) | No accounts needed in v1 |
 
 The browser never calculates rollups itself; it reads them from the API, which reads one SQL view.
 
