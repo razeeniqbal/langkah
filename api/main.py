@@ -1,2 +1,7 @@
-# Entrypoint for Vercel Services (root: api/, entrypoint: main:app).
-from app.main import app  # noqa: F401
+# Entrypoint for Vercel (builds api/main.py with @vercel/python).
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from app.main import app  # noqa: E402,F401

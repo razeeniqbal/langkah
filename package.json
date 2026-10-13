@@ -1,0 +1,8 @@
+{
+  "name": "workbench",
+  "private": true,
+  "description": "Root build script used by Vercel; the app lives in web/ and api/.",
+  "scripts": {
+    "vercel-build": "npm --prefix web ci && npm --prefix web run build"
+  }
+}
