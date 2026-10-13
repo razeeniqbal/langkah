@@ -66,19 +66,19 @@ const submitOnCtrlEnter = (e: React.KeyboardEvent<HTMLFormElement>) => {
   }
 }
 
-/** Plan items grouped by project then section, for the link dropdown. */
-function ItemOptions({ d }: { d: Data }) {
+/** One project's plan items grouped by section, for the link dropdown. */
+function ItemOptions({ d, projectId }: { d: Data; projectId: string | null }) {
+  const sections = new Map<string, PlanItem[]>()
+  for (const i of d.items) {
+    if (i.projectId === projectId) sections.set(i.section, [...(sections.get(i.section) ?? []), i])
+  }
   return (
     <>
-      {d.projects.map((p) => {
-        const items = d.items.filter((i) => i.projectId === p.id)
-        if (!items.length) return null
-        return (
-          <optgroup key={p.id} label={`${p.code} · ${p.name}`}>
-            {items.map((i) => <option key={i.id} value={i.id}>{i.section ? `${i.section} / ` : ''}{i.title}</option>)}
-          </optgroup>
-        )
-      })}
+      {[...sections].map(([section, items]) => (
+        <optgroup key={section} label={section || 'No section'}>
+          {items.map((i) => <option key={i.id} value={i.id}>{i.title}</option>)}
+        </optgroup>
+      ))}
     </>
   )
 }
@@ -145,19 +145,22 @@ function CardEditor({ d, id, draft, noteId }: { d: Data; id?: string; draft?: Pa
         <Field label="Title">
           <input className={`input ${s.titleInput}`} data-autofocus value={f.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
         </Field>
+        <Field label="Project">
+          <select className="select" value={projectId ?? ''}
+            onChange={(e) => {
+              // A plan item belongs to one project, so switching project drops the link.
+              const pid = e.target.value
+              set({ projectId: pid, planItemId: item && item.projectId !== pid ? null : f.planItemId ?? null })
+            }}>
+            {d.projects.map((p) => <option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}
+          </select>
+        </Field>
         <Field label="Plan item" hint={item ? <ItemHint d={d} item={item} /> : 'Fine for work outside the plan; it still counts toward the project %.'}>
           <select className="select" value={f.planItemId ?? ''} onChange={(e) => set({ planItemId: e.target.value || null })}>
             <option value="">No plan item (not on the timeline)</option>
-            <ItemOptions d={d} />
+            <ItemOptions d={d} projectId={projectId ?? null} />
           </select>
         </Field>
-        {!item && (
-          <Field label="Project">
-            <select className="select" value={projectId ?? ''} onChange={(e) => set({ projectId: e.target.value })}>
-              {d.projects.map((p) => <option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}
-            </select>
-          </Field>
-        )}
         <Field label="Status">
           <div className={`seg ${s.wide}`} role="group" aria-label="Status">
             {STATUSES.map((st) => (
