@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { initials } from '../lib/data'
 import { useUI } from '../lib/store'
 import type { Person } from '../lib/types'
+import { Illustration, type Art } from './Brand'
 import s from './ui.module.css'
 
 const PATHS: Record<string, string> = {
@@ -10,17 +11,19 @@ const PATHS: Record<string, string> = {
   chevron: 'M6 4l4 4-4 4',
   search: 'M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10zM10.5 10.5L14 14',
   rail: 'M2 2h12v12H2zM6 2v12',
-  board: 'M2 3h3v10H2zM6.5 3h3v7h-3zM11 3h3v5h-3z',
-  timeline: 'M2 4h7M5 8h8M3 12h5',
-  team: 'M2 3h12M2 8h12M2 13h12M6 3v10',
+  board: 'M2.5 3.5h11v9h-11zM6 3.5v9M10 3.5v9',
+  timeline: 'M2.5 2.5v11h11M5.5 10.5v-3M8.5 10.5v-6M11.5 10.5v-4',
+  team: 'M6 7.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM1.5 13.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4M10.5 2.7a2.4 2.4 0 0 1 0 4.6M12 9.8c1.5.5 2.5 1.8 2.5 3.7',
   sun: 'M8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM8 1v2M8 13v2M1 8h2M13 8h2',
+  moon: 'M13.5 9.5A5.5 5.5 0 1 1 6.5 2.5a4.5 4.5 0 0 0 7 7z',
+  sigma: 'M12 3H4l4.5 5L4 13h8',
   edit: 'M3 13l1-3 7-7 2 2-7 7zM10 4l2 2',
 }
 
 export function Icon({ name, size = 14 }: { name: keyof typeof PATHS | string; size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"
-      strokeLinecap="square" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d={PATHS[name]} />
     </svg>
   )
@@ -125,11 +128,13 @@ export function Field({ label, children, hint }: { label: string; children: Reac
   )
 }
 
-export function Empty({ title, children }: { title: string; children?: ReactNode }) {
+export function Empty({ title, text, art, children }: { title: string; text?: ReactNode; art?: Art; children?: ReactNode }) {
   return (
     <div className={s.empty}>
-      <div className="mono">{title}</div>
-      {children && <div className="muted">{children}</div>}
+      {art && <Illustration art={art} />}
+      <h2 className={s.emptyTitle}>{title}</h2>
+      {text && <p className={`muted ${s.emptyText}`}>{text}</p>}
+      {children && <div className={s.emptyActions}>{children}</div>}
     </div>
   )
 }

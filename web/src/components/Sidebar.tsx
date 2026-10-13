@@ -1,5 +1,6 @@
 import type { Data } from '../lib/data'
 import { useUI, type Theme } from '../lib/store'
+import { LogoMark, Wordmark } from './Brand'
 import { Icon } from './ui'
 import s from './Sidebar.module.css'
 
@@ -12,13 +13,8 @@ export function Sidebar({ d }: { d: Data }) {
   return (
     <aside className={s.side} aria-label="Projects">
       <div className={s.brand}>
-        <svg className={s.mark} viewBox="0 0 20 20" aria-hidden="true">
-          <rect x="1" y="1" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" />
-          <rect x="4" y="5" width="8" height="2.5" fill="var(--accent)" />
-          <rect x="7" y="9" width="9" height="2.5" fill="none" stroke="currentColor" strokeWidth="1" />
-          <rect x="5" y="13" width="5" height="2.5" fill="currentColor" />
-        </svg>
-        <span className={`${s.label} ${s.word}`}>Workbench</span>
+        <span className={s.mark}><LogoMark size={30} /></span>
+        <span className={`${s.label} ${s.word}`}><Wordmark tagline={false} /></span>
         <button className={`btn ghost icon ${s.collapse}`} title={ui.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-pressed={ui.sidebarCollapsed} onClick={() => ui.set({ sidebarCollapsed: !ui.sidebarCollapsed })}>
           <Icon name="rail" />
@@ -28,7 +24,7 @@ export function Sidebar({ d }: { d: Data }) {
       <div className={`mono muted ${s.heading}`}><span className={s.label}>Projects</span></div>
       <nav className={s.list}>
         <button className={s.row} aria-current={d.all || undefined} onClick={() => ui.setProject('all')} title="All projects">
-          <span className={`${s.code} ${s.allCode}`}>∑</span>
+          <span className={`${s.code} ${s.allCode}`}><Icon name="sigma" size={16} /></span>
           <span className={`${s.label} ${s.name}`}>All projects</span>
           <span className={`${s.label} ${s.pct}`}>{pct(d.overallAll)}</span>
         </button>
@@ -54,13 +50,14 @@ export function Sidebar({ d }: { d: Data }) {
 
       <div className={s.foot}>
         <button className={s.footBtn} onClick={() => ui.set({ palette: true })} title="Command palette (Ctrl K)">
-          <Icon name="search" size={13} />
+          <Icon name="search" size={15} />
           <span className={s.label}>Jump to…</span>
           <kbd className={s.label}>Ctrl K</kbd>
         </button>
         <button className={s.footBtn} onClick={() => ui.set({ theme: NEXT_THEME[ui.theme] })} title="Theme">
-          <Icon name="sun" size={13} />
-          <span className={`${s.label} mono`}>Theme · {ui.theme}</span>
+          <Icon name={ui.theme === 'light' ? 'sun' : 'moon'} size={15} />
+          <span className={s.label}>Theme · <span className={s.themeName}>{ui.theme}</span></span>
+          <span className={`${s.label} ${s.chevR}`}><Icon name="chevron" size={12} /></span>
         </button>
       </div>
     </aside>

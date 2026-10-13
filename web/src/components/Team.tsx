@@ -57,7 +57,7 @@ export function Team({ d }: { d: Data }) {
       )}
 
       {stats.length === 0 ? (
-        <Empty title="No one on this team yet" />
+        <Empty art="team" title="No one on this team yet" text="Add people above to assign cards and plan items." />
       ) : (
         <div className={s.tableWrap}>
           <table className={s.table}>

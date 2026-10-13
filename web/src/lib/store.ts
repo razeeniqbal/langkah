@@ -76,7 +76,7 @@ export const useUI = create<UI>()(
       view: 'board',
       projectId: 'all',
       sidebarCollapsed: false,
-      theme: 'system',
+      theme: 'dark',
       zoom: 'month',
       sheet: false,
       collapsed: {},

@@ -1,6 +1,6 @@
-# Workbench
+# LANGKAH. (repo: workbench)
 
-Personal project tracker: Kanban cards drive the progress of plan items on a Gantt timeline. Full spec in `docs/PRD.md`; read it before changing behaviour.
+LANGKAH. ("a step" in Malay; Plan / Track / Deliver) is a personal project tracker: Kanban cards drive the progress of plan items on a Gantt timeline. Full spec in `docs/PRD.md`; read it before changing behaviour.
 
 ## Layout
 
@@ -30,30 +30,33 @@ cd web && npm install && npm run dev
 
 ## Design rules (keep every session consistent)
 
-The app should look like an engineer's planning sheet, not a SaaS template.
+Brand: LANGKAH. Every step moves work forward. The name is Malay; every UI label stays in English. The Malay influence is subtle (wordmark, step logo); no batik, skylines or ornamental borders in the workspace.
 
-Tokens live in `web/src/styles/global.css`. Never hard-code colours in components; use the variables.
+Tokens live in `web/src/styles/global.css`. Never hard-code colours in components; use the variables. Dark is the default theme; light is a warm-white variant of the same system.
 
-| Token | Light | Dark | Use |
-|---|---|---|---|
-| `--bg` | #edefea | #141715 | Page |
-| `--surface` | #ffffff | #1f2421 | Cards, panels |
-| `--ink` | #1b211e | #e5e9e2 | Text, primary buttons, rules |
-| `--accent` | #2443b8 | #93a6f2 | Selection, progress (the only accent) |
-| `--mark` | #f2d33c | #d8b72a | Today, "me" |
-| `--danger` | #c23b22 | #ef7c63 | Late, behind |
+| Token | Dark | Use |
+|---|---|---|
+| `--bg` | #0C1412 | Page (charcoal green) |
+| `--surface` | #17211E | Cards, panels |
+| `--surface-2` / `--elev` | #111A17 / #1D2925 | Sidebar, wells / hover, active |
+| `--ink` / `--ink-2` | #F2F0E8 / #9AA7A1 | Text / muted text |
+| `--line` / `--line-strong` | #24332E / #2E3D38 | Borders |
+| `--gold` | #D9B968 | Brand accent: primary buttons, selection, active tab, today, "me" |
+| `--accent` | #64BDA2 | Progress only (done work, percentages) |
+| `--danger` / `--warn` / `--info` | #F06B70 / #F3BD3E / #4C9DFF | Late, behind / attention / in progress |
 
-- Fonts: Schibsted Grotesk for names and body, IBM Plex Mono (uppercase, tracked) for labels, dates and numbers.
-- Hairline 1px rules instead of shadows; 2 to 3px corners. Hard offset shadows (`3px 3px 0 var(--ink)`) only for things lifted off the sheet (drag overlay, palette).
-- Remaining work is hatched, done work is solid accent.
-- Square monograms, never coloured circle avatars. "Me" gets the highlighter yellow.
+- Fonts: Manrope for the interface, IBM Plex Mono (uppercase, tracked) for labels, dates, identifiers and numbers.
+- 6px corners on controls, 8px on cards and panels; 1px borders, tonal layering instead of heavy shadows. `--shadow` only for things lifted off the page (drawer, palette, drag overlay, toasts).
+- Primary action is a gold button; secondary actions are bordered. Toggle filters are mono chips that turn gold when on.
+- Remaining work is a hatched dark track, done work is solid green. Today is a gold dashed line.
+- Monograms are rounded squares; "me" is gold.
+- Brand marks (logo, wordmark, empty-state illustrations) live in `web/src/components/Brand.tsx`.
 - Motion has a purpose: cards settle into a column, bars fill, percentages tick like counters. Respect `prefers-reduced-motion`.
-- Dark theme is designed on its own (quieter lines, lighter accent), not an inversion.
 - Text must pass WCAG AA in both themes; use `--ink-2` for muted text, never lighter.
 
 ### Avoid
 
-- Gradient logos, glassmorphism, soft drop shadows on every card, purple to blue heroes.
-- Emoji as icons (use the small SVG set in `components/ui.tsx`), rounded pill buttons, Inter or Space Grotesk.
-- Coloured rails on the edge of cards.
+- Gradients as a design language, glassmorphism, soft drop shadows on every card, glows.
+- Emoji as icons (use the SVG set in `components/ui.tsx`), oversized rounded pills, Inter or Space Grotesk.
+- Decorative UI with no function, new dashboard sections not in the approved design.
 - Component kits (MUI, shadcn, etc.) and Gantt libraries.

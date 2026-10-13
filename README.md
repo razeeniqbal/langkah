@@ -1,6 +1,6 @@
-# Workbench
+# LANGKAH.
 
-A personal project tracker where Kanban cards drive the progress of plan items on a Gantt timeline, across several projects. Spec: [docs/PRD.md](docs/PRD.md).
+Plan / Track / Deliver. A personal project tracker where Kanban cards drive the progress of plan items on a Gantt timeline, across several projects. Spec: [docs/PRD.md](docs/PRD.md).
 
 - **Board**: five columns, drag and drop (mouse or keyboard), inline rename and due date, progress strip per plan item.
 - **Timeline**: custom SVG Gantt with Week, Month and Quarter zoom, drag to move or resize, milestones, progress knob, card due markers, and a drawing-sheet mode.

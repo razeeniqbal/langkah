@@ -1,73 +1,83 @@
 .side {
   display: flex; flex-direction: column; min-height: 0; overflow: hidden;
-  border-right: 1px solid var(--ink);
+  border-right: 1px solid var(--line);
   background: var(--surface-2);
 }
 .brand {
-  display: flex; align-items: center; gap: 10px;
-  height: 52px; padding: 0 10px 0 16px; flex: none;
-  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 12px;
+  height: 76px; padding: 0 14px 0 22px; flex: none;
 }
-.mark { width: 20px; height: 20px; flex: none; color: var(--ink); }
-.word { font-family: var(--font-mono); font-weight: 600; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; flex: 1; }
-.collapse { margin-left: auto; }
-.heading { padding: 16px 16px 6px; }
+.mark { display: grid; flex: none; }
+.word { flex: 1; min-width: 0; }
+.collapse { margin-left: auto; width: 32px !important; height: 32px; }
+.heading { padding: 18px 24px 10px; font-size: 10.5px; }
 
-.list { display: flex; flex-direction: column; padding: 0 8px; gap: 1px; overflow-y: auto; flex: 1; }
+.list { display: flex; flex-direction: column; padding: 0 14px; gap: 4px; overflow-y: auto; flex: 1; }
 .item { position: relative; }
 .row {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  height: 36px; padding: 0 8px;
-  border: 1px solid transparent; border-radius: var(--r);
+  position: relative;
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  height: 46px; padding: 0 12px;
+  border: 0; border-radius: var(--r-3);
   background: none; text-align: left;
+  transition: background 120ms;
 }
-.row:hover { border-color: var(--line); background: var(--surface); }
-.row[aria-current] { border-color: var(--ink); background: var(--surface); }
-.row[aria-current] .pct { color: var(--accent); }
+.row:hover { background: var(--elev); }
+.row[aria-current] { background: var(--gold-weak); }
+.row[aria-current]::before {
+  content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--gold);
+}
 .code {
   display: grid; place-items: center; flex: none;
-  width: 30px; height: 22px;
-  border: 1px solid var(--ink); border-radius: var(--r);
+  width: 34px; height: 26px;
+  border: 1px solid var(--line-strong); border-radius: 6px;
   font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em;
-  background: var(--surface);
+  background: var(--surface); color: var(--ink);
 }
-.row[aria-current] .code { background: var(--ink); color: var(--bg); }
-.allCode { font-size: 13px; }
-.addCode { border-style: dashed; color: var(--ink-2); }
+.row[aria-current] .code { border-color: var(--gold); color: var(--gold); background: transparent; }
+.allCode { border: 0; background: none; color: var(--gold); }
+.addCode { border-style: dashed; color: var(--ink-2); background: none; }
 .add { color: var(--ink-2); }
-.name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.pct { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); padding-right: 18px; }
+.name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 14px; }
+.pct { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); padding-right: 18px; }
+.row[aria-current] .pct { color: var(--gold); }
 .edit {
-  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
-  display: grid; place-items: center; width: 20px; height: 20px;
-  border: 0; background: none; color: var(--ink-2); opacity: 0;
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  display: grid; place-items: center; width: 22px; height: 22px;
+  border: 0; border-radius: 4px; background: none; color: var(--ink-2); opacity: 0;
 }
 .item:hover .edit, .edit:focus-visible { opacity: 1; }
-.edit:hover { color: var(--accent); }
+.edit:hover { color: var(--gold); }
 
-.foot { display: flex; flex-direction: column; gap: 2px; padding: 8px; border-top: 1px solid var(--line); }
+.foot { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 16px; border-top: 1px solid var(--line); margin: 0 10px; }
 .footBtn {
-  display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px;
-  border: 0; border-radius: var(--r); background: none; color: var(--ink-2); text-align: left;
+  display: flex; align-items: center; gap: 12px; height: 38px; padding: 0 10px;
+  border: 0; border-radius: var(--r); background: none; color: var(--ink-2); text-align: left; font-weight: 500;
 }
-.footBtn:hover { color: var(--ink); background: var(--surface); }
+.footBtn:hover { color: var(--ink); background: var(--elev); }
 .footBtn kbd { margin-left: auto; }
+.footBtn svg:first-child { color: var(--gold); }
+.themeName { text-transform: capitalize; }
+.chevR { margin-left: auto; display: grid; }
 
 /* Icon rail: collapsed by choice, or forced on narrow screens. */
 :global([data-collapsed]) .label { display: none; }
-:global([data-collapsed]) .brand { padding: 0; justify-content: center; flex-direction: column; gap: 4px; height: auto; padding: 10px 0; }
+:global([data-collapsed]) .brand { justify-content: center; flex-direction: column; gap: 8px; height: auto; padding: 14px 0; }
 :global([data-collapsed]) .collapse { margin: 0; }
-:global([data-collapsed]) .heading { padding: 10px 0 4px; }
-:global([data-collapsed]) .list { padding: 0 6px; }
+:global([data-collapsed]) .heading { padding: 10px 0 4px; text-align: center; }
+:global([data-collapsed]) .list { padding: 0 8px; }
 :global([data-collapsed]) .row { justify-content: center; padding: 0; }
+:global([data-collapsed]) .foot { margin: 0; padding: 8px; }
 :global([data-collapsed]) .footBtn { justify-content: center; padding: 0; }
 @media (max-width: 720px) {
+  .side { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
   .label { display: none; }
-  .brand { justify-content: center; padding: 10px 0; flex-direction: column; height: auto; }
+  .brand { justify-content: center; padding: 12px 0; flex-direction: column; height: auto; }
   .collapse { display: none; }
-  .heading { padding: 10px 0 4px; }
-  .list { padding: 0 4px; }
+  .heading { padding: 10px 0 4px; text-align: center; }
+  .list { padding: 0 6px; }
   .row { justify-content: center; padding: 0; }
-  .code { width: 34px; }
+  .foot { margin: 0; padding: 8px 4px; }
   .footBtn { justify-content: center; padding: 0; }
 }

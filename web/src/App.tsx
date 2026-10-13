@@ -7,7 +7,7 @@ import { Login } from './components/Login'
 import { Sidebar } from './components/Sidebar'
 import { Team } from './components/Team'
 import { Timeline } from './components/Timeline'
-import { Empty, Toasts } from './components/ui'
+import { Empty, Icon, Toasts } from './components/ui'
 import { useData } from './lib/data'
 import { useUI } from './lib/store'
 import s from './App.module.css'
@@ -77,13 +77,13 @@ export function App() {
         <Header d={d} />
         <section className={s.view}>
           {d.error ? (
-            <Empty title="Cannot reach the API">{String((d.error as Error).message)}</Empty>
+            <Empty title="Cannot reach the API" text={String((d.error as Error).message)} />
           ) : d.loading ? (
-            <Empty title="Loading sheet…" />
+            <Empty title="Loading…" />
           ) : d.projects.length === 0 ? (
-            <Empty title="No projects yet">
+            <Empty art="projects" title="No projects yet" text="Create your first project to start planning.">
               <button className="btn primary" onClick={() => useUI.getState().open({ kind: 'project' })}>
-                New project
+                <Icon name="plus" size={15} /> New project
               </button>
             </Empty>
           ) : view === 'board' ? (

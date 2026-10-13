@@ -85,10 +85,10 @@ function Column({ d, status, label, credit, cards }: {
   const { setNodeRef, isOver } = useDroppable({ id: status })
   const points = cards.reduce((n, c) => n + c.points, 0)
   return (
-    <section className={s.col} data-over={isOver || undefined} aria-label={label}>
+    <section className={s.col} data-status={status} data-over={isOver || undefined} aria-label={label}>
       <header className={s.colHead}>
         <div className={s.colTitle}>
-          <span className="mono">{label}</span>
+          <h2>{label}</h2>
           <span className={`num ${s.count}`}>{cards.length}</span>
         </div>
         <div className={`mono muted ${s.colMeta}`}>
@@ -97,8 +97,8 @@ function Column({ d, status, label, credit, cards }: {
         </div>
       </header>
       <div ref={setNodeRef} className={s.colBody}>
-        {cards.map((c) => <DraggableCard key={c.id} d={d} card={c} />)}
         <QuickAdd d={d} status={status} />
+        {cards.map((c) => <DraggableCard key={c.id} d={d} card={c} />)}
       </div>
     </section>
   )
@@ -142,6 +142,13 @@ const CardTile = memo(function CardTile({ d, card, overlay }: { d: Data; card: C
       onClick={(e) => {
         if (!editing && !(e.target as HTMLElement).closest('button,input')) ui.open({ kind: 'card', id: card.id })
       }}>
+      {editing === 'title' ? (
+        <InlineInput initial={card.title} {...stop}
+          onDone={(v) => { setEditing(null); if (v && v !== card.title) update.mutate({ id: card.id, title: v }) }} />
+      ) : (
+        <h3 className={s.title} onDoubleClick={() => setEditing('title')} title="Double-click to rename">{card.title}</h3>
+      )}
+
       <div className={s.ref}>
         {item ? (
           <button className={s.refBtn} title={`Show only “${item.title}”`} {...stop}
@@ -153,14 +160,8 @@ const CardTile = memo(function CardTile({ d, card, overlay }: { d: Data; card: C
         )}
       </div>
 
-      {editing === 'title' ? (
-        <InlineInput initial={card.title} {...stop}
-          onDone={(v) => { setEditing(null); if (v && v !== card.title) update.mutate({ id: card.id, title: v }) }} />
-      ) : (
-        <h3 className={s.title} onDoubleClick={() => setEditing('title')} title="Double-click to rename">{card.title}</h3>
-      )}
-
       <footer className={s.foot}>
+        <Monogram person={card.assigneeId ? d.personById.get(card.assigneeId) : null} small />
         {editing === 'due' ? (
           <InlineInput type="date" initial={card.due ?? ''} {...stop}
             onDone={(v) => { setEditing(null); if (v !== (card.due ?? '')) update.mutate({ id: card.id, due: v || null }) }} />
@@ -172,8 +173,7 @@ const CardTile = memo(function CardTile({ d, card, overlay }: { d: Data; card: C
         )}
         {late && <span className="tag late">Late</span>}
         <span className={s.spacer} />
-        <span className={`num ${s.pts}`} title="Effort points">{card.points} pt</span>
-        <Monogram person={card.assigneeId ? d.personById.get(card.assigneeId) : null} small />
+        <span className={`num ${s.pts}`} title={`${card.points} effort points`}>{card.points}</span>
       </footer>
     </article>
   )

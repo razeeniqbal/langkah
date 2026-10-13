@@ -1,5 +1,5 @@
 .toasts {
-  position: fixed; left: 50%; bottom: 20px; z-index: 60;
+  position: fixed; left: 50%; bottom: 24px; z-index: 60;
   display: flex; flex-direction: column; gap: 8px; align-items: center;
   transform: translateX(-50%);
   pointer-events: none;
@@ -8,21 +8,30 @@
   pointer-events: auto;
   display: flex; align-items: center; gap: 12px;
   max-width: min(560px, calc(100vw - 32px));
-  padding: 8px 12px;
-  border: 1px solid var(--ink); border-radius: var(--r);
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong); border-radius: var(--r-3);
   background: var(--surface); text-align: left;
+  box-shadow: var(--shadow);
   animation: rise 260ms var(--ease-out);
 }
-.toastLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.toastLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-weight: 600; }
 .delta { display: inline-flex; gap: 6px; align-items: baseline; flex: none; }
 .delta b { color: var(--accent); font-weight: 600; }
 @keyframes rise { from { transform: translateY(8px); opacity: 0; } }
 
-.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .hint { font-size: 12px; color: var(--ink-2); }
 
 .empty {
-  display: grid; gap: 6px; place-items: center; text-align: center;
-  padding: 48px 16px; margin: 16px;
-  border: 1px dashed var(--line); border-radius: var(--r);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  flex: 1; gap: 8px; padding: 48px 16px;
+}
+.empty :global(.art) { margin-bottom: 12px; max-width: 100%; height: auto; }
+.emptyTitle { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.emptyText { margin: 0; font-size: 15px; max-width: 420px; }
+.emptyActions { margin-top: 16px; display: flex; gap: 8px; }
+.emptyActions :global(.btn) { height: 44px; padding: 0 22px; font-size: 14.5px; }
+@media (max-width: 720px) {
+  .toasts { bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .emptyTitle { font-size: 22px; }
 }

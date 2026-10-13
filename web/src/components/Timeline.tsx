@@ -4,7 +4,8 @@ import { fromDay, isoWeek, long, monthName, parts, short, toDay, weekday } from 
 import { isBehind, isLate, type Data } from '../lib/data'
 import { useUI, type Zoom } from '../lib/store'
 import type { PlanItem, Project } from '../lib/types'
-import { Icon, Monogram } from './ui'
+import { Actions, Stats } from './Header'
+import { Empty, Icon, Monogram } from './ui'
 import s from './Timeline.module.css'
 
 const PPD: Record<Zoom, number> = { week: 30, month: 9, quarter: 3 } // pixels per day
@@ -173,13 +174,12 @@ export function Timeline({ d }: { d: Data }) {
   if (!d.all && d.project && d.scopeItems.length === 0) {
     return (
       <div className={s.emptyWrap}>
-        <Toolbar zoom={zoom} sheet={sheet} onToday={scrollToToday} />
-        <div className={s.empty}>
-          <span className="mono">No plan items in {d.project.name}</span>
+        <Toolbar d={d} zoom={zoom} sheet={sheet} onToday={scrollToToday} />
+        <Empty art="timeline" title="No plan items yet" text={`Add the first plan item to put ${d.project.name} on the timeline.`}>
           <button className="btn primary" onClick={() => ui.open({ kind: 'item', draft: { projectId: d.project!.id } })}>
-            <Icon name="plus" size={12} /> Plan item
+            <Icon name="plus" size={15} /> Plan item
           </button>
-        </div>
+        </Empty>
       </div>
     )
   }
@@ -188,7 +188,7 @@ export function Timeline({ d }: { d: Data }) {
 
   return (
     <div className={s.wrap}>
-      <Toolbar zoom={zoom} sheet={sheet} onToday={scrollToToday} />
+      <Toolbar d={d} zoom={zoom} sheet={sheet} onToday={scrollToToday} />
       <div className={`${s.frame} ${sheet ? s.sheet : ''}`}>
         <div ref={scroller} className={s.scroller} data-dragging={drag?.mode ?? undefined}>
           <div className={s.grid} style={{ gridTemplateColumns: `${LEFT}px ${W}px`, paddingBottom: sheet ? 96 : 24 }}>
@@ -209,14 +209,14 @@ export function Timeline({ d }: { d: Data }) {
             <svg className={s.chart} width={W} height={H} role="img" aria-label="Timeline">
               <defs>
                 <pattern id="wb-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                  <rect width="5" height="5" fill="var(--surface)" />
+                  <rect width="5" height="5" fill="var(--bar-track)" />
                   <line x1="0" y1="0" x2="0" y2="5" stroke="var(--hatch)" strokeWidth="1.1" />
                 </pattern>
               </defs>
               <Grid d0={d0} d1={d1} x={x} ppd={ppd} zoom={zoom} H={H} sheet={sheet} rows={rows} ROW={ROW} />
               {/* today: highlighter band with a hairline */}
-              <rect x={x(today) + ppd / 2 - scaleW / 2} y={0} width={scaleW} height={H} fill="var(--mark)" opacity={0.35} />
-              <line x1={x(today) + ppd / 2} x2={x(today) + ppd / 2} y1={0} y2={H} stroke="var(--ink)" strokeWidth={1} strokeDasharray="2 3" />
+              <rect x={x(today) + ppd / 2 - scaleW / 2} y={0} width={scaleW} height={H} fill="var(--gold)" opacity={0.06} />
+              <line x1={x(today) + ppd / 2} x2={x(today) + ppd / 2} y1={0} y2={H} stroke="var(--gold)" strokeWidth={1.25} strokeDasharray="4 4" />
 
               {rows.map((r, idx) => {
                 const y = idx * ROW
@@ -255,18 +255,20 @@ export function Timeline({ d }: { d: Data }) {
   )
 }
 
-function Toolbar({ zoom, sheet, onToday }: { zoom: Zoom; sheet: boolean; onToday: () => void }) {
+function Toolbar({ d, zoom, sheet, onToday }: { d: Data; zoom: Zoom; sheet: boolean; onToday: () => void }) {
   const set = useUI((x) => x.set)
   return (
     <div className={s.toolbar}>
+      <Stats d={d} />
+      <div className={s.tools}>
       <div className="seg" role="group" aria-label="Zoom">
         {(['week', 'month', 'quarter'] as Zoom[]).map((z) => (
           <button key={z} aria-pressed={zoom === z} onClick={() => set({ zoom: z })}>{z}</button>
         ))}
       </div>
       <button className="btn" onClick={onToday}>Today</button>
-      <button className={`btn ${sheet ? 'on' : ''}`} aria-pressed={sheet} onClick={() => set({ sheet: !sheet })}
-        title="Dense drawing-sheet mode">
+      <button className="chip" aria-pressed={sheet} onClick={() => set({ sheet: !sheet })}
+        title="Dense sheet mode">
         Sheet
       </button>
       <div className={`mono muted ${s.legend}`}>
@@ -275,6 +277,8 @@ function Toolbar({ zoom, sheet, onToday }: { zoom: Zoom; sheet: boolean; onToday
         <span><i className={s.diamond} /> Milestone</span>
         <span><i className={s.tick} /> Card due</span>
       </div>
+      </div>
+      <Actions d={d} />
     </div>
   )
 }
@@ -362,10 +366,10 @@ function Scale({ d0, d1, x, ppd, zoom, today, sheet }: {
       {top}
       {bottom}
       <g>
-        <rect x={tx - 23} y={27} width={46} height={14} fill="var(--mark)" stroke="var(--ink)" strokeWidth={1} />
+        <rect x={tx - 24} y={27} width={48} height={15} rx={4} fill="var(--gold)" />
         <text x={tx} y={37.5} textAnchor="middle" className={s.todayText}>Today</text>
       </g>
-      <line x1={0} x2="100%" y1={HEAD - 0.5} y2={HEAD - 0.5} stroke="var(--ink)" />
+      <line x1={0} x2="100%" y1={HEAD - 0.5} y2={HEAD - 0.5} stroke="var(--line-strong)" />
     </g>
   )
 }
@@ -408,11 +412,9 @@ function SummaryBar({ x1, x2, y, ROW, progress, strong }: { x1: number; x2: numb
   const w = Math.max(x2 - x1, 2)
   return (
     <g>
-      <rect x={x1} y={by} width={w} height={h} fill="url(#wb-hatch)" />
-      <rect x={x1} y={by} width={w} height={h} fill="var(--accent)" className={s.fill}
+      <rect x={x1} y={by} width={w} height={h} rx={h / 2} fill="var(--bar-track)" />
+      <rect x={x1} y={by} width={w} height={h} rx={h / 2} fill="var(--gold)" className={s.fill}
         style={{ transform: `scaleX(${progress / 100})`, transformOrigin: `${x1}px 0` }} />
-      <rect x={x1 + 0.5} y={by + 0.5} width={w - 1} height={h - 1} fill="none" stroke="var(--ink)" />
-      <path d={`M${x1} ${by + h} l0 4 l5 -4 z M${x1 + w} ${by + h} l0 4 l-5 -4 z`} fill="var(--ink)" />
     </g>
   )
 }
@@ -424,7 +426,7 @@ function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dra
   progress: number; behind: boolean; knob: boolean; dragging: Drag | null; sheet: boolean; markers: Marker[]
   onBegin: (e: React.PointerEvent, mode: Drag['mode']) => void
 }) {
-  const stroke = behind ? 'var(--danger)' : 'var(--ink)'
+  const stroke = behind ? 'var(--danger)' : 'var(--bar-line)'
   const label = dragging && dragging.mode !== 'knob' && dragging.moved
     ? `${short(fromDay(start))} → ${short(fromDay(end))} · ${end - start + 1}d`
     : `${Math.round(progress)}%`
@@ -436,7 +438,7 @@ function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dra
         <title>{`${item.title} · ${long(fromDay(start))}`}</title>
         <rect x={cx - 10} y={y} width={20} height={ROW} fill="transparent" />
         <path d={`M${cx} ${cy - r} L${cx + r} ${cy} L${cx} ${cy + r} L${cx - r} ${cy} Z`}
-          fill={progress >= 100 ? 'var(--accent)' : 'var(--surface)'} stroke={stroke} strokeWidth={1.5} />
+          fill={progress >= 100 ? 'var(--accent)' : 'var(--surface)'} stroke={behind ? 'var(--danger)' : 'var(--ink-2)'} strokeWidth={1.5} />
         <text x={cx + r + 5} y={cy + 3.5} className={s.barLabel}>
           {dragging?.moved ? short(fromDay(start)) : `${short(item.start)}${behind ? ' · behind' : ''}`}
         </text>
@@ -452,10 +454,10 @@ function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dra
   return (
     <g className={s.item} data-active={dragging ? true : undefined}>
       <title>{`${item.title} · ${short(fromDay(start))} → ${short(fromDay(end))} · ${Math.round(progress)}%`}</title>
-      <rect x={x1} y={by} width={w} height={bh} fill="url(#wb-hatch)" />
-      <rect x={x1} y={by} width={w} height={bh} fill="var(--accent)" className={dragging?.mode === 'knob' ? undefined : s.fill}
+      <rect x={x1} y={by} width={w} height={bh} rx={4} fill="url(#wb-hatch)" />
+      <rect x={x1} y={by} width={w} height={bh} rx={4} fill="var(--accent)" className={dragging?.mode === 'knob' ? undefined : s.fill}
         style={{ transform: `scaleX(${progress / 100})`, transformOrigin: `${x1}px 0` }} />
-      <rect x={x1 + 0.5} y={by + 0.5} width={Math.max(w - 1, 1)} height={bh - 1} fill="none" stroke={stroke}
+      <rect x={x1 + 0.5} y={by + 0.5} width={Math.max(w - 1, 1)} height={bh - 1} rx={3.5} fill="none" stroke={stroke}
         strokeWidth={behind ? 1.5 : 1} className={s.body} onPointerDown={(e) => onBegin(e, 'move')} pointerEvents="all" />
       <rect x={x1 - 3} y={by - 2} width={7} height={bh + 4} className={s.handle} onPointerDown={(e) => onBegin(e, 'start')} />
       <rect x={x1 + w - 4} y={by - 2} width={7} height={bh + 4} className={s.handle} onPointerDown={(e) => onBegin(e, 'end')} />
@@ -463,7 +465,7 @@ function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dra
         <g className={s.knob} onPointerDown={(e) => onBegin(e, 'knob')}>
           <title>Drag to set progress manually</title>
           <rect x={kx - 7} y={by + bh - 2} width={14} height={10} fill="transparent" />
-          <path d={`M${kx} ${by + bh - 1} l4.5 6 h-9 z`} fill="var(--ink)" />
+          <path d={`M${kx} ${by + bh - 1} l4.5 6 h-9 z`} fill="var(--gold)" />
         </g>
       )}
       {markers.map((m) => (

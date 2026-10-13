@@ -8,13 +8,13 @@
 @keyframes fade { from { opacity: 0; } }
 .box {
   width: min(620px, 100%);
-  border: 1px solid var(--ink); border-radius: var(--r-3);
+  border: 1px solid var(--line-strong); border-radius: 12px; overflow: hidden;
   background: var(--surface);
-  box-shadow: 6px 6px 0 var(--ink);
+  box-shadow: var(--shadow);
   animation: pop 160ms var(--ease-out);
 }
 @keyframes pop { from { transform: translateY(-6px); } }
-.inputRow { display: flex; align-items: center; gap: 10px; padding: 0 12px; height: 48px; border-bottom: 1px solid var(--ink); color: var(--ink-2); }
+.inputRow { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 56px; border-bottom: 1px solid var(--line); color: var(--ink-2); }
 .inputRow input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--ink); font-size: 16px; }
 .list { max-height: 52vh; overflow-y: auto; padding: 4px 0 6px; }
 .group { padding: 10px 14px 4px; font-size: 9.5px; }
@@ -23,6 +23,6 @@
   margin: 0 6px; padding: 7px 8px; border-radius: var(--r); cursor: pointer;
   border: 1px solid transparent;
 }
-.item[data-sel] { border-color: var(--ink); background: var(--accent-weak); }
+.item[data-sel] { border-color: var(--gold); background: var(--gold-weak); }
 .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .none { padding: 18px 14px; }
