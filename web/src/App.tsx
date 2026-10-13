@@ -9,6 +9,7 @@ import { Sidebar } from './components/Sidebar'
 import { Team } from './components/Team'
 import { Timeline } from './components/Timeline'
 import { Empty, Icon, Toasts } from './components/ui'
+import { loadSession } from './lib/api'
 import { useData } from './lib/data'
 import { singleItem, uiZoom, useUI } from './lib/store'
 import s from './App.module.css'
@@ -61,7 +62,7 @@ function useShortcuts(defaultProjectId: string | null) {
       }
       if (typing(e.target) || e.ctrlKey || e.metaKey || e.altKey || ui.editor || ui.palette) return
       const k = e.key.toLowerCase()
-      if (k === 'n' && defaultProjectId) {
+      if (k === 'n' && defaultProjectId && ui.role !== 'view') {
         e.preventDefault()
         const planItemId = singleItem(ui.filters)
         ui.open({ kind: 'card', draft: { projectId: defaultProjectId, planItemId, status: 'todo' } })
@@ -82,6 +83,7 @@ function useShortcuts(defaultProjectId: string | null) {
 export function App() {
   useTheme()
   useDisplaySize()
+  useEffect(() => { loadSession().catch(() => {}) }, [])
   const d = useData()
   useShortcuts(d.defaultProjectId)
   const view = useUI((x) => x.view)

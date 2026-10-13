@@ -41,6 +41,9 @@ interface UI {
   editor: Editor | null
   palette: boolean
   authNeeded: boolean
+  role: 'edit' | 'view' // 'view' = signed in with the View only button
+  authRequired: boolean // a password is set on the server
+  viewOnlyAvailable: boolean
   toasts: Toast[]
   settling: string | null // id of the card that just landed in a column
 
@@ -88,6 +91,9 @@ export function uiZoom(): number {
   return useUI.getState().uiScale || 1
 }
 
+/** True in a view-only session: hide or lock every control that changes data. */
+export const useReadOnly = () => useUI((s) => s.role === 'view')
+
 let toastSeq = 0
 
 export const useUI = create<UI>()(
@@ -107,6 +113,9 @@ export const useUI = create<UI>()(
       editor: null,
       palette: false,
       authNeeded: false,
+      role: 'edit',
+      authRequired: false,
+      viewOnlyAvailable: false,
       toasts: [],
       settling: null,
 

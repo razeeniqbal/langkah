@@ -23,6 +23,9 @@
 .head > div:first-child { flex: 1; min-width: 0; }
 .head h2 { margin: 4px 0 0; font-size: 20px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; overflow-wrap: anywhere; }
 .body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 20px 22px; }
+/* Editors use <fieldset disabled> to lock every field in view-only mode. */
+fieldset.body { margin: 0; border: 0; min-width: 0; min-height: 0; }
+.fields { display: contents; }
 .foot {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   padding: 14px 22px; border-top: 1px solid var(--line); background: var(--surface);

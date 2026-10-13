@@ -204,3 +204,60 @@ def test_deleting_project_unfiles_its_notes(c):
     assert c.delete(f"/api/projects/{p['id']}").status_code == 204
     left = c.get("/api/notes").json()
     assert [(x["id"], x["projectId"]) for x in left] == [(n["id"], None)]
+
+
+@pytest.fixture()
+def locked(c, monkeypatch):
+    """The same app with a password set, and a fresh cookie jar."""
+    from app import auth
+    monkeypatch.setattr(auth, "PASSWORD", "s3cret")
+    monkeypatch.setattr(auth, "VIEW_ONLY", True)
+    c.cookies.clear()
+    return c
+
+
+def test_password_required_when_set(locked):
+    assert locked.get("/api/projects").status_code == 401
+    assert locked.get("/api/auth/status").json() == {"required": True, "ok": False, "role": None, "viewOnly": True}
+    assert locked.post("/api/auth/login", json={"password": "nope"}).status_code == 401
+
+
+def test_password_signs_in_to_edit(locked):
+    assert locked.post("/api/auth/login", json={"password": "s3cret"}).json()["role"] == "edit"
+    assert locked.get("/api/auth/status").json()["role"] == "edit"
+    assert locked.post("/api/projects", json={"name": "Edit", "code": "ED"}).status_code == 201
+
+
+def test_view_only_reads_but_cannot_write(locked):
+    # Seed data as an editor, then switch to view only.
+    locked.post("/api/auth/login", json={"password": "s3cret"})
+    p = mk_project(locked)
+    n = locked.post("/api/notes", json={"text": "x"}).json()
+    locked.post("/api/auth/logout")
+    locked.cookies.clear()
+
+    assert locked.post("/api/auth/view").json()["role"] == "view"
+    assert locked.get("/api/auth/status").json()["role"] == "view"
+    assert [x["id"] for x in locked.get("/api/projects").json()] == [p["id"]]
+    assert locked.get("/api/summary").status_code == 200
+    for method, path, body in [
+        ("post", "/api/projects", {"name": "No", "code": "NO"}),
+        ("patch", f"/api/projects/{p['id']}", {"name": "No"}),
+        ("delete", f"/api/projects/{p['id']}", None),
+        ("post", "/api/cards", {"title": "No", "projectId": p["id"]}),
+        ("post", f"/api/notes/{n['id']}/promote", {}),
+        ("put", f"/api/people/x/projects/{p['id']}", None),
+    ]:
+        kw = {"json": body} if body is not None else {}
+        r = getattr(locked, method)(path, **kw)
+        assert r.status_code == 403, (method, path, r.status_code)
+    # Nothing changed.
+    assert locked.get("/api/projects").json()[0]["name"] == "DIC Abandonment"
+    assert len(locked.get("/api/notes").json()) == 1
+
+
+def test_view_only_can_be_turned_off(locked, monkeypatch):
+    from app import auth
+    monkeypatch.setattr(auth, "VIEW_ONLY", False)
+    assert locked.post("/api/auth/view").status_code == 404
+    assert locked.get("/api/auth/status").json()["viewOnly"] is False

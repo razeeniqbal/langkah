@@ -230,4 +230,23 @@ export function usePeopleOps() {
   }
 }
 
+export interface AuthStatus { required: boolean; ok: boolean; role: 'edit' | 'view' | null; viewOnly: boolean }
+
+/** Reads the session from the server and mirrors it in the UI store. */
+export async function loadSession() {
+  const st = await api.get<AuthStatus>('/auth/status')
+  useUI.getState().set({
+    role: st.role ?? 'edit', authRequired: st.required, viewOnlyAvailable: st.viewOnly,
+    ...(st.ok ? {} : { authNeeded: true }),
+  })
+  return st
+}
+
+/** Drop the session and go back to the sign-in screen. */
+export async function signOut() {
+  await api.post('/auth/logout')
+  queryClient.clear()
+  useUI.getState().set({ authNeeded: true, editor: null, palette: false })
+}
+
 export const refetchAll = () => Promise.all(ALL.map((k) => queryClient.invalidateQueries({ queryKey: [k] })))

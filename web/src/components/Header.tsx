@@ -1,6 +1,6 @@
 import { long, toDay, weekday } from '../lib/dates'
 import { assigneeGroups, type Data } from '../lib/data'
-import { singleItem, useUI, type View } from '../lib/store'
+import { singleItem, useReadOnly, useUI, type View } from '../lib/store'
 import { Counter, Icon, Monogram, MultiSelect } from './ui'
 import s from './Header.module.css'
 
@@ -35,6 +35,7 @@ export function Header({ d }: { d: Data }) {
           <strong>{long(d.today)}</strong>
           <span className="muted">{WEEKDAYS[weekday(toDay(d.today))]}</span>
         </div>
+        {ui.role === 'view' && <span className="tag" title="Sign in with the password to make changes">View only</span>}
         {d.me && (
           <div className={s.me} title="You">
             <Monogram person={d.me} />
@@ -119,6 +120,7 @@ export function Stats({ d }: { d: Data }) {
 /** New card / new plan item, shown on every view. */
 export function Actions({ d }: { d: Data }) {
   const ui = useUI()
+  if (useReadOnly()) return null
   return (
     <div className={s.actions}>
       <button className="btn" disabled={!d.defaultProjectId}

@@ -37,7 +37,7 @@ export function CommandPalette({ d }: { d: Data }) {
     const one = singleItem(ui.filters)
     const filterItem = one ? d.itemById.get(one) : undefined
 
-    if (query && pid) {
+    if (query && pid && ui.role !== 'view') {
       out.push({
         id: 'new-card-quick', group: 'Create', label: `New card “${q.trim()}”`,
         meta: filterItem ? `in ${filterItem.title}` : `in ${d.projectById.get(pid)?.code}`,
@@ -55,7 +55,7 @@ export function CommandPalette({ d }: { d: Data }) {
       { id: 't-theme', group: 'Toggle', label: 'Switch theme', meta: ui.theme, run: () => ui.set({ theme: ui.theme === 'dark' ? 'light' : 'dark' }) },
       { id: 't-sheet', group: 'Toggle', label: ui.sheet ? 'Leave drawing-sheet mode' : 'Drawing-sheet mode', run: () => ui.set({ sheet: !ui.sheet, view: 'timeline' }) },
     ]
-    out.push(...actions.filter((a) => hit(a.label, a.group)))
+    out.push(...actions.filter((a) => hit(a.label, a.group) && !(ui.role === 'view' && a.group === 'Create')))
 
     out.push({ id: 'p-all', group: 'Projects', label: 'All projects', meta: '∑', run: () => ui.setProject('all') })
     for (const p of d.projects) {

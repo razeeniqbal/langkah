@@ -43,7 +43,7 @@ The app listens on `127.0.0.1:8080`. To reach it from your other devices over Ta
 tailscale serve --bg 8080
 ```
 
-Set `WORKBENCH_PASSWORD` in `.env` if you also want a login screen; leave it empty to rely on Tailscale alone.
+Set `WORKBENCH_PASSWORD` in `.env` if you also want a login screen; leave it empty to rely on Tailscale alone. With a password set, the sign-in screen also has a **View only** button: anyone who can reach the app can read everything but change nothing. Set `WORKBENCH_VIEW_ONLY=0` to remove it.
 
 ## Deploy to Vercel
 

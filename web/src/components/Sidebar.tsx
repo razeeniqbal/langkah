@@ -1,4 +1,5 @@
 import type { Data } from '../lib/data'
+import { signOut } from '../lib/api'
 import { UI_SCALES, useUI, type Theme } from '../lib/store'
 import { LogoMark, Wordmark } from './Brand'
 import { Icon } from './ui'
@@ -8,6 +9,7 @@ const NEXT_THEME: Record<Theme, Theme> = { system: 'light', light: 'dark', dark:
 
 export function Sidebar({ d }: { d: Data }) {
   const ui = useUI()
+  const ro = ui.role === 'view'
   const pct = (v: number | undefined) => `${Math.round(v ?? 0)}%`
 
   return (
@@ -31,21 +33,25 @@ export function Sidebar({ d }: { d: Data }) {
         {d.projects.filter((p) => !p.archived).map((p) => (
           <div key={p.id} className={s.item}>
             <button className={s.row} aria-current={d.project?.id === p.id || undefined}
-              onClick={() => ui.setProject(p.id)} onDoubleClick={() => ui.open({ kind: 'project', id: p.id })}
+              onClick={() => ui.setProject(p.id)} onDoubleClick={() => !ro && ui.open({ kind: 'project', id: p.id })}
               title={`${p.name} · ${pct(d.projectProgress.get(p.id))}`}>
               <span className={s.code}>{p.code}</span>
               <span className={`${s.label} ${s.name}`}>{p.name}</span>
               <span className={`${s.label} ${s.pct}`}>{pct(d.projectProgress.get(p.id))}</span>
             </button>
-            <button className={`${s.label} ${s.edit}`} title={`Edit ${p.name}`} onClick={() => ui.open({ kind: 'project', id: p.id })}>
-              <Icon name="edit" size={12} />
-            </button>
+            {!ro && (
+              <button className={`${s.label} ${s.edit}`} title={`Edit ${p.name}`} onClick={() => ui.open({ kind: 'project', id: p.id })}>
+                <Icon name="edit" size={12} />
+              </button>
+            )}
           </div>
         ))}
-        <button className={`${s.row} ${s.add}`} onClick={() => ui.open({ kind: 'project' })} title="New project">
-          <span className={`${s.code} ${s.addCode}`}><Icon name="plus" size={12} /></span>
-          <span className={`${s.label} ${s.name}`}>New project</span>
-        </button>
+        {!ro && (
+          <button className={`${s.row} ${s.add}`} onClick={() => ui.open({ kind: 'project' })} title="New project">
+            <span className={`${s.code} ${s.addCode}`}><Icon name="plus" size={12} /></span>
+            <span className={`${s.label} ${s.name}`}>New project</span>
+          </button>
+        )}
       </nav>
 
       <div className={s.foot}>
@@ -65,6 +71,13 @@ export function Sidebar({ d }: { d: Data }) {
           <span className={s.label}>Display size · <span className="num">{Math.round((ui.uiScale || 1) * 100)}%</span></span>
           <span className={`${s.label} ${s.chevR}`}><Icon name="chevron" size={12} /></span>
         </button>
+        {ui.authRequired && (
+          <button className={s.footBtn} onClick={() => signOut()}
+            title={ro ? 'Sign in with the password to make changes' : 'Sign out of this browser'}>
+            <Icon name={ro ? 'edit' : 'close'} size={15} />
+            <span className={s.label}>{ro ? 'View only · Sign in to edit' : 'Sign out'}</span>
+          </button>
+        )}
       </div>
     </aside>
   )

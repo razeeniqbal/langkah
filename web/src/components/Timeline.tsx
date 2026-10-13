@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { useUpdateItem } from '../lib/api'
 import { fromDay, isoWeek, long, monthName, parts, short, toDay, weekday } from '../lib/dates'
 import { isBehind, isLate, type Data } from '../lib/data'
-import { uiZoom, useUI, type Zoom } from '../lib/store'
+import { uiZoom, useReadOnly, useUI, type Zoom } from '../lib/store'
 import type { PlanItem, Project } from '../lib/types'
 import { Actions, Stats } from './Header'
 import { Empty, Icon, Monogram } from './ui'
@@ -76,6 +76,7 @@ export function Timeline({ d }: { d: Data }) {
   const LEFT = narrow ? 150 : leftWidth
   const leftRef = useRef<HTMLDivElement>(null)
   const update = useUpdateItem()
+  const ro = useReadOnly()
   const scroller = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<Drag | null>(null)
   const dragRef = useRef<Drag | null>(null)
@@ -260,6 +261,7 @@ export function Timeline({ d }: { d: Data }) {
     if (e.button !== 0) return
     e.preventDefault()
     e.stopPropagation()
+    if (ro) return ui.open({ kind: 'item', id: item.id })
     const start = toDay(item.start), end = toDay(item.end)
     setDrag({ id: item.id, mode, x0: e.clientX, start, end, dStart: start, dEnd: end, moved: false })
   }

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { usePeopleOps } from '../lib/api'
 import { isLate, type Data } from '../lib/data'
-import { useUI } from '../lib/store'
+import { useReadOnly, useUI } from '../lib/store'
 import type { Person } from '../lib/types'
 import { ConfirmButton, Empty, Icon, Monogram } from './ui'
 import s from './Team.module.css'
@@ -10,6 +10,8 @@ export function Team({ d }: { d: Data }) {
   const ui = useUI()
   const ops = usePeopleOps()
   const [name, setName] = useState('')
+  const nameInput = useRef<HTMLInputElement>(null)
+  const ro = useReadOnly()
   const people = ui.filters.myWork ? d.team.filter((p) => p.isMe) : d.team
   const outside = d.project ? d.people.filter((p) => !p.projectIds.includes(d.project!.id)) : []
 
@@ -32,15 +34,17 @@ export function Team({ d }: { d: Data }) {
 
   return (
     <div className={s.wrap}>
-      {d.project && (
+      {d.project && !ro && (
         <form className={s.add} onSubmit={(e) => {
           e.preventDefault()
-          if (name.trim()) ops.create.mutate({ name: name.trim(), projectIds: [d.project!.id] })
+          // With no name yet, point at the box instead of doing nothing.
+          if (!name.trim()) return nameInput.current?.focus()
+          ops.create.mutate({ name: name.trim(), projectIds: [d.project!.id] })
           setName('')
         }}>
-          <input className="input" placeholder={`Add a new person to ${d.project.code}`} value={name}
+          <input ref={nameInput} className="input" placeholder={`Add a new person to ${d.project.code}`} value={name}
             onChange={(e) => setName(e.target.value)} aria-label="New person name" />
-          <button className="btn primary" disabled={!name.trim()}><Icon name="plus" size={12} /> Add</button>
+          <button className="btn primary"><Icon name="plus" size={12} /> Add</button>
           {outside.length > 0 && (
             <select className={`select ${s.existing}`} value="" aria-label="Add an existing person"
               onChange={(e) => e.target.value && ops.join.mutate({ id: e.target.value, projectId: d.project!.id })}>
@@ -79,7 +83,7 @@ export function Team({ d }: { d: Data }) {
                   <td>
                     <div className={s.person}>
                       <Monogram person={p} />
-                      <NameCell person={p} onSave={(n) => ops.rename.mutate({ id: p.id, name: n })} />
+                      {ro ? <span className={s.name}>{p.name}</span> : <NameCell person={p} onSave={(n) => ops.rename.mutate({ id: p.id, name: n })} />}
                       {p.isMe && <span className="tag me">Me</span>}
                     </div>
                   </td>
@@ -100,7 +104,7 @@ export function Team({ d }: { d: Data }) {
                     </div>
                   </td>
                   <td className={s.actions}>
-                    {d.project ? (
+                    {ro ? null : d.project ? (
                       <ConfirmButton onConfirm={() => ops.leave.mutate({ id: p.id, projectId: d.project!.id })}
                         title={`Remove from ${d.project.code}; their ${d.project.code} cards and items become unassigned`}>
                         Remove

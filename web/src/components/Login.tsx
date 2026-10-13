@@ -1,11 +1,19 @@
-import { useState } from 'react'
-import { api, refetchAll } from '../lib/api'
+import { useEffect, useState } from 'react'
+import { api, loadSession, refetchAll } from '../lib/api'
 import { useUI } from '../lib/store'
 import { LogoMark, Wordmark } from './Brand'
 
 export function Login() {
   const [pw, setPw] = useState('')
   const [err, setErr] = useState<string | null>(null)
+  const viewOnly = useUI((x) => x.viewOnlyAvailable)
+  useEffect(() => { loadSession().catch(() => {}) }, [])
+  const enter = async (path: string, body?: unknown) => {
+    await api.post(path, body)
+    await loadSession()
+    useUI.getState().set({ authNeeded: false })
+    refetchAll()
+  }
   return (
     <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 16 }}>
       <form
@@ -16,9 +24,7 @@ export function Login() {
         onSubmit={async (e) => {
           e.preventDefault()
           try {
-            await api.post('/auth/login', { password: pw })
-            useUI.getState().set({ authNeeded: false })
-            refetchAll()
+            await enter('/auth/login', { password: pw })
           } catch {
             setErr('Wrong password.')
           }
@@ -36,7 +42,19 @@ export function Login() {
           <input className="input" type="password" autoFocus value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" />
         </label>
         {err && <span style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</span>}
-        <button className="btn primary" style={{ height: 42 }}>Sign in</button>
+        <button className="btn primary" style={{ height: 42 }}>Sign in to edit</button>
+        {viewOnly && (
+          <>
+            <div className="mono muted" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10 }}>
+              <span style={{ flex: 1, height: 1, background: 'var(--line)' }} />or<span style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+            </div>
+            <button type="button" className="btn" style={{ height: 42 }}
+              onClick={() => enter('/auth/view').catch(() => setErr('View only is not available.'))}>
+              View only
+            </button>
+            <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>See every project, board and timeline without making changes.</p>
+          </>
+        )}
       </form>
     </div>
   )

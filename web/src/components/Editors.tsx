@@ -5,7 +5,7 @@ import {
 } from '../lib/api'
 import { addDays, short, span, todayISO } from '../lib/dates'
 import { assigneeGroups, isLate, type Data } from '../lib/data'
-import { useUI } from '../lib/store'
+import { useReadOnly, useUI } from '../lib/store'
 import { POINTS, STATUSES, type Card, type PlanItem, type Project } from '../lib/types'
 import { ConfirmButton, Counter, Field, Icon, Monogram, ProgressBar } from './ui'
 import s from './Editors.module.css'
@@ -48,6 +48,15 @@ function Foot({ onDelete, deleteLabel = 'Delete', deleteDisabled, deleteTitle, s
   onDelete?: () => void; deleteLabel?: string; deleteDisabled?: boolean; deleteTitle?: string; saveLabel: string; error?: string | null
 }) {
   const close = useUI((x) => x.close)
+  if (useReadOnly()) {
+    return (
+      <footer className={s.foot}>
+        <span className="mono muted">View only</span>
+        <span className={s.spacer} />
+        <button type="button" className="btn" onClick={close}>Close</button>
+      </footer>
+    )
+  }
   return (
     <footer className={s.foot}>
       {onDelete && <ConfirmButton onConfirm={onDelete} disabled={deleteDisabled} title={deleteTitle}>{deleteLabel}</ConfirmButton>}
@@ -116,6 +125,7 @@ function CardEditor({ d, id, draft, noteId }: { d: Data; id?: string; draft?: Pa
   const del = useDeleteCard()
   const notes = useNoteOps()
   const ui = useUI()
+  const ro = useReadOnly()
   const [error, setError] = useState<string | null>(null)
   const item = f.planItemId ? d.itemById.get(f.planItemId) : undefined
   const projectId = item?.projectId ?? f.projectId ?? d.defaultProjectId
@@ -124,6 +134,7 @@ function CardEditor({ d, id, draft, noteId }: { d: Data; id?: string; draft?: Pa
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    if (ro) return
     if (!f.title?.trim()) return setError('A card needs a title.')
     const body = {
       title: f.title.trim(), planItemId: f.planItemId ?? null, projectId: projectId ?? undefined,
@@ -141,7 +152,7 @@ function CardEditor({ d, id, draft, noteId }: { d: Data; id?: string; draft?: Pa
         title={existing ? existing.title : noteId ? 'Send to board' : 'New card'}>
         {existing && isLate(existing, d.today) && <span className="tag late">Late</span>}
       </Head>
-      <div className={s.body}>
+      <fieldset className={s.body} disabled={ro}>
         <Field label="Title">
           <input className={`input ${s.titleInput}`} data-autofocus value={f.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
         </Field>
@@ -186,7 +197,7 @@ function CardEditor({ d, id, draft, noteId }: { d: Data; id?: string; draft?: Pa
         <Field label="Notes">
           <textarea className="textarea" rows={5} value={f.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
         </Field>
-      </div>
+      </fieldset>
       <Foot saveLabel={existing ? 'Save' : noteId ? 'Add to board' : 'Create card'} error={error}
         onDelete={existing ? () => { del.mutate(existing.id); ui.close() } : undefined} />
     </form>
@@ -216,6 +227,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
   const del = useDeleteItem()
   const createCard = useCreateCard()
   const ui = useUI()
+  const ro = useReadOnly()
   const [error, setError] = useState<string | null>(null)
   const [newCard, setNewCard] = useState('')
   const cards = existing ? d.cardsByItem.get(existing.id) ?? [] : []
@@ -229,6 +241,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    if (ro) return
     if (!f.title?.trim()) return setError('A plan item needs a title.')
     if (!f.start || (!f.milestone && (!f.end || f.end < f.start))) return setError('End must be on or after start.')
     const body = {
@@ -254,6 +267,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
             <strong><Counter value={progress?.progress ?? 0} /></strong>
           </div>
         )}
+        <fieldset className={s.fields} disabled={ro}>
         <Field label="Title">
           <input className={`input ${s.titleInput}`} data-autofocus value={f.title ?? ''} onChange={(e) => set({ title: e.target.value })} />
         </Field>
@@ -289,6 +303,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
         <Field label="Notes">
           <textarea className="textarea" rows={3} value={f.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
         </Field>
+        </fieldset>
 
         {existing && (
           <div className={s.cards}>
@@ -307,7 +322,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
                 <Monogram person={c.assigneeId ? d.personById.get(c.assigneeId) : null} small />
               </button>
             ))}
-            <div className={s.addCard}>
+            {!ro && <div className={s.addCard}>
               <input className="input" placeholder="Add card…" value={newCard} onChange={(e) => setNewCard(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -320,7 +335,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
                 onClick={() => { createCard.mutate({ title: newCard.trim(), planItemId: existing.id, status: 'todo' }); setNewCard('') }}>
                 <Icon name="plus" size={12} /> Add card
               </button>
-            </div>
+            </div>}
           </div>
         )}
       </div>
@@ -341,11 +356,13 @@ function ProjectEditor({ d, id }: { d: Data; id?: string }) {
   const save = useSaveProject()
   const del = useDeleteProject()
   const ui = useUI()
+  const ro = useReadOnly()
   const items = existing ? d.items.filter((i) => i.projectId === existing.id).length : 0
   const cards = existing ? d.cards.filter((c) => c.projectId === existing.id).length : 0
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (ro) return
     if (!name.trim()) return setError('Give the project a name.')
     if (!/^[A-Z0-9]{2,3}$/.test(code)) return setError('Code is 2 to 3 letters or digits.')
     try {
@@ -360,7 +377,7 @@ function ProjectEditor({ d, id }: { d: Data; id?: string }) {
   return (
     <form className={s.form} onSubmit={submit} onKeyDown={submitOnCtrlEnter}>
       <Head kicker={existing ? `Project · ${existing.code}` : 'New project'} title={existing ? existing.name : 'New project'} />
-      <div className={s.body}>
+      <fieldset className={s.body} disabled={ro}>
         <Field label="Name">
           <input className={`input ${s.titleInput}`} data-autofocus value={name} placeholder="DIC Abandonment"
             onChange={(e) => {
@@ -378,7 +395,7 @@ function ProjectEditor({ d, id }: { d: Data; id?: string }) {
             {items} plan items · {cards} cards · {d.people.filter((p) => p.projectIds.includes(existing.id)).length} people
           </p>
         )}
-      </div>
+      </fieldset>
       <Foot saveLabel={existing ? 'Save' : 'Create project'} error={error}
         deleteDisabled={items + cards > 0}
         deleteTitle={items + cards > 0 ? 'Only empty projects can be deleted' : undefined}

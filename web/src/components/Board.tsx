@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom'
 import { useCreateCard, useUpdateCard } from '../lib/api'
 import { short } from '../lib/dates'
 import { isLate, type Data } from '../lib/data'
-import { singleItem, uiZoom, useUI } from '../lib/store'
+import { singleItem, uiZoom, useReadOnly, useUI } from '../lib/store'
 import { STATUSES, type Card, type Status } from '../lib/types'
 import { Counter, Icon, Monogram, ProgressBar } from './ui'
 import s from './Board.module.css'
@@ -102,7 +102,7 @@ function Column({ d, status, label, credit, cards }: {
         </div>
       </header>
       <div ref={setNodeRef} className={s.colBody}>
-        <QuickAdd d={d} status={status} />
+        {!useReadOnly() && <QuickAdd d={d} status={status} />}
         {cards.map((c) => <DraggableCard key={c.id} d={d} card={c} />)}
       </div>
     </section>
@@ -110,7 +110,7 @@ function Column({ d, status, label, credit, cards }: {
 }
 
 function DraggableCard({ d, card }: { d: Data; card: Card }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id })
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id, disabled: useReadOnly() })
   const open = useUI((x) => x.open)
   return (
     <div ref={setNodeRef} {...attributes} {...listeners} className={s.slot} data-dragging={isDragging || undefined}
@@ -128,7 +128,9 @@ const CardTile = memo(function CardTile({ d, card, overlay }: { d: Data; card: C
   const ui = useUI.getState()
   const settling = useUI((x) => x.settling === card.id)
   const update = useUpdateCard()
-  const [editing, setEditing] = useState<'title' | 'due' | null>(null)
+  const [editingState, setEditing] = useState<'title' | 'due' | null>(null)
+  const ro = useReadOnly()
+  const editing = ro ? null : editingState
   const item = card.planItemId ? d.itemById.get(card.planItemId) : undefined
   const project = d.projectById.get(card.projectId)
   const late = isLate(card, d.today)

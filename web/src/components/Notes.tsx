@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useNoteOps, useNotes } from '../lib/api'
 import { short, todayISO } from '../lib/dates'
 import type { Data } from '../lib/data'
-import { useUI } from '../lib/store'
+import { useReadOnly, useUI } from '../lib/store'
 import type { Note } from '../lib/types'
 import { ConfirmButton, Empty, Icon } from './ui'
 import s from './Notes.module.css'
@@ -15,6 +15,7 @@ export function Notes({ d }: { d: Data }) {
   const ui = useUI()
   const notes = useNotes()
   const ops = useNoteOps()
+  const ro = useReadOnly()
   const [text, setText] = useState('')
   const [projectId, setProjectId] = useState<string>(d.project?.id ?? '')
   const q = ui.filters.search.trim().toLowerCase()
@@ -41,7 +42,7 @@ export function Notes({ d }: { d: Data }) {
 
   return (
     <div className={s.wrap}>
-      <form className={s.capture} onSubmit={add}>
+      {!ro && <form className={s.capture} onSubmit={add}>
         <input className={`input ${s.captureInput}`} placeholder="Write down a pending item, press Enter to add"
           value={text} onChange={(e) => setText(e.target.value)} aria-label="New note" maxLength={500} autoFocus />
         <select className={`select ${s.captureProject}`} value={projectId} aria-label="Project for the new note"
@@ -50,7 +51,7 @@ export function Notes({ d }: { d: Data }) {
           {d.projects.map((p) => <option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}
         </select>
         <button className="btn primary" disabled={!text.trim()}><Icon name="plus" size={12} /> Add</button>
-      </form>
+      </form>}
 
       <div className={s.meta}>
         <span className="mono muted">Pending · {list.length}</span>
@@ -63,7 +64,7 @@ export function Notes({ d }: { d: Data }) {
       ) : (
         <ul className={s.list}>
           {list.map((n) => (
-            <NoteRow key={n.id} n={n} d={d}
+            <NoteRow key={n.id} n={n} d={d} ro={ro}
               onText={(t) => ops.update.mutate({ id: n.id, text: t })}
               onProject={(pid) => ops.update.mutate({ id: n.id, projectId: pid })}
               onBoard={() => toBoard(n)}
@@ -75,8 +76,8 @@ export function Notes({ d }: { d: Data }) {
   )
 }
 
-function NoteRow({ n, d, onText, onProject, onBoard, onDelete }: {
-  n: Note; d: Data
+function NoteRow({ n, d, ro, onText, onProject, onBoard, onDelete }: {
+  n: Note; d: Data; ro: boolean
   onText: (t: string) => void; onProject: (pid: string | null) => void; onBoard: () => void; onDelete: () => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -94,18 +95,22 @@ function NoteRow({ n, d, onText, onProject, onBoard, onDelete }: {
             if (e.key === 'Escape') setEditing(false)
           }} />
       ) : (
-        <button className={s.text} onClick={() => setEditing(true)} title="Click to edit">{n.text}</button>
+        <button className={s.text} onClick={() => !ro && setEditing(true)} title={ro ? undefined : 'Click to edit'}>{n.text}</button>
       )}
-      <select className={`select ${s.project}`} value={n.projectId ?? ''} aria-label="Project"
+      <select className={`select ${s.project}`} value={n.projectId ?? ''} aria-label="Project" disabled={ro}
         onChange={(e) => onProject(e.target.value || null)}>
         <option value="">No project</option>
         {d.projects.map((p) => <option key={p.id} value={p.id}>{p.code}</option>)}
       </select>
       <span className={`num muted ${s.date}`} title="Added">{short(todayISO(n.createdAt))}</span>
-      <button className="btn" onClick={onBoard} title="Make this a card on the board">
-        <Icon name="send" size={13} /> <span className={s.boardLabel}>To board</span>
-      </button>
-      <ConfirmButton onConfirm={onDelete}>Delete</ConfirmButton>
+      {!ro && (
+        <>
+          <button className="btn" onClick={onBoard} title="Make this a card on the board">
+            <Icon name="send" size={13} /> <span className={s.boardLabel}>To board</span>
+          </button>
+          <ConfirmButton onConfirm={onDelete}>Delete</ConfirmButton>
+        </>
+      )}
     </li>
   )
 }
