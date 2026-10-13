@@ -3,6 +3,6 @@
   "private": true,
   "description": "Root build script used by Vercel; the app lives in web/ and api/.",
   "scripts": {
-    "vercel-build": "npm --prefix web ci && npm --prefix web run build"
+    "vercel-build": "cd web && npm ci && npm run build"
   }
 }
