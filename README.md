@@ -49,7 +49,7 @@ Set `WORKBENCH_PASSWORD` in `.env` if you also want a login screen; leave it emp
 `vercel.json` defines two services: `web/` (Vite) at `/` and `api/` (FastAPI) at `/api`.
 
 1. Import the repo in Vercel with the **Services** preset and root `./`.
-2. Storage tab → add a **Neon Postgres** database and connect it to the project (it sets `DATABASE_URL`).
+2. Add a Postgres database: Storage tab → **Neon** (sets `DATABASE_URL` for you), or Supabase → Connect → **Transaction pooler** URI (port 6543) pasted into `DATABASE_URL`. Tables go in their own `workbench` schema.
 3. Settings → Environment Variables: set `WORKBENCH_PASSWORD` and a long random `WORKBENCH_SECRET`. The API refuses to serve data on Vercel without a password.
 4. Redeploy. Load data from your machine against the same database:
 

@@ -30,7 +30,9 @@ P = f"{SCHEMA}." if SCHEMA else ""  # table prefix for raw SQL
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if IS_SQLITE else {},
+    # Poolers in transaction mode (Supabase :6543, Neon -pooler) can't keep
+    # server-side prepared statements, so psycopg must not create them.
+    connect_args={"check_same_thread": False} if IS_SQLITE else {"prepare_threshold": None},
     pool_pre_ping=not IS_SQLITE,
     # Serverless instances freeze between requests; don't hold idle connections.
     **({"poolclass": NullPool} if SERVERLESS and not IS_SQLITE else {}),
