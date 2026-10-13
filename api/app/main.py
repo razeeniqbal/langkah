@@ -30,6 +30,22 @@ async def require_login(request: Request, call_next):
     return await call_next(request)
 
 
+class RestoreApiPrefix:
+    """On Vercel the platform may strip the /api route prefix before the request
+    reaches us; put it back so routes match either way."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and not scope["path"].startswith("/api"):
+            scope = dict(scope, path="/api" + scope["path"], raw_path=b"/api" + scope.get("raw_path", b""))
+        await self.app(scope, receive, send)
+
+
+if os.environ.get("VERCEL"):
+    app.add_middleware(RestoreApiPrefix)
+
 app.include_router(auth.router, prefix="/api")
 app.include_router(router, prefix="/api")
 

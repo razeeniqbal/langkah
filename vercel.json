@@ -1,16 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
+  "experimentalServices": {
     "web": {
-      "root": "web/"
+      "entrypoint": "web",
+      "routePrefix": "/"
     },
     "api": {
-      "root": "api/",
-      "entrypoint": "main:app"
+      "entrypoint": "api/main.py",
+      "routePrefix": "/api"
     }
-  },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": { "service": "api" } },
-    { "source": "/(.*)", "destination": { "service": "web" } }
-  ]
+  }
 }
