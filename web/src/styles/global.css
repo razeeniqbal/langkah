@@ -202,3 +202,33 @@ kbd {
 .wordmarkName { font-weight: 600; font-size: 17px; letter-spacing: 0.32em; }
 .wordmarkName b { color: var(--gold); font-weight: 700; letter-spacing: 0; }
 .wordmarkTag { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-2); }
+
+/* Bottom sheet (phones): menu, filter lists. */
+.sheetBackdrop {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  background: var(--overlay);
+  animation: sheetFade 160ms var(--ease-out);
+}
+.sheet {
+  display: flex; flex-direction: column; max-height: 85dvh;
+  border: 1px solid var(--line-strong); border-bottom: 0; border-radius: 14px 14px 0 0;
+  background: var(--surface); box-shadow: var(--shadow);
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: sheetUp 220ms var(--ease-out);
+}
+.sheetHead { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 6px 20px; }
+@keyframes sheetUp { from { transform: translateY(24px); opacity: 0; } }
+@keyframes sheetFade { from { opacity: 0; } }
+
+/* Phones: comfortable tap targets everywhere (about 44px). */
+@media (max-width: 720px) {
+  .btn, .chip, .input, .select { height: 44px; }
+  .btn.icon { width: 44px; }
+  .seg { padding: 3px; }
+  .seg > button { height: 38px; min-width: 38px; padding: 0 12px; }
+  .textarea { font-size: 16px; }
+  /* 16px stops iOS from zooming into fields on focus. */
+  .input, .select { font-size: 16px; }
+  input[type='checkbox'] { width: 20px; height: 20px; }
+}

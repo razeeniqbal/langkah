@@ -106,8 +106,28 @@
 }
 .add:hover { border-color: var(--line-strong); color: var(--ink); }
 
+.tabs, .statusPick { display: none; }
+@media (max-width: 720px), (hover: none) and (pointer: coarse) {
+  .statusPick { display: block; height: 38px !important; margin-top: 6px; font-size: 14px !important; }
+  .card { cursor: default; }
+}
 @media (max-width: 720px) {
-  .columns { grid-template-columns: repeat(5, 82%); padding: 12px 14px; gap: 10px; }
+  /* Status tabs: jump between columns; the one in view is highlighted. */
+  .tabs {
+    display: flex; gap: 6px; padding: 10px 14px 0; overflow-x: auto; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button {
+    flex: none; display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px;
+    border: 1px solid var(--line-strong); border-radius: var(--r); background: transparent;
+    font-size: 13.5px; font-weight: 600; color: var(--ink-2);
+  }
+  .tabs button span { font-size: 11px; padding: 1px 6px; border-radius: 5px; background: var(--elev); }
+  .tabs button[aria-selected='true'] { color: var(--ink); border-color: var(--gold); background: var(--gold-weak); }
+  .columns { grid-template-columns: repeat(5, 88%); padding: 10px 14px 14px; gap: 10px; scroll-snap-type: x mandatory; }
+  .col { min-height: 60dvh; }
+  .due { padding: 6px 6px; }
+  .refBtn { padding: 4px 0; }
   .strip { margin: 10px 14px 0; flex-wrap: wrap; gap: 8px; }
   .stripBar { width: 100%; order: 3; }
   .stripMain { flex-basis: calc(100% - 120px); }

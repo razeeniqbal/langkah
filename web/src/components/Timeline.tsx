@@ -11,7 +11,7 @@ import s from './Timeline.module.css'
 const PPD: Record<Zoom, number> = { week: 30, month: 9, quarter: 3 } // pixels per day
 const PAD: Record<Zoom, number> = { week: 10, month: 28, quarter: 60 } // days either side
 const HEAD = 44
-const LEFT_MIN = 200, LEFT_MAX = 900
+const LEFT_MIN = 200, LEFT_MAX = 900, LEFT_MIN_PHONE = 110
 const SCALE_MIN = 0.1, SCALE_MAX = 5
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
@@ -76,7 +76,11 @@ export function Timeline({ d }: { d: Data }) {
   const ppd = PPD[zoom] * scale
   const ROW = sheet ? 26 : 34
   const narrow = useNarrow()
-  const LEFT = narrow ? 150 : leftWidth
+  // Phones keep their own, narrower column width.
+  const LEFT = narrow ? ui.leftWidthPhone ?? 168 : leftWidth
+  const leftMax = narrow ? Math.max(LEFT_MIN_PHONE, window.innerWidth - 110) : LEFT_MAX
+  const leftMin = narrow ? LEFT_MIN_PHONE : LEFT_MIN
+  const setLeft = (w: number) => useUI.getState().set(narrow ? { leftWidthPhone: clamp(w, leftMin, leftMax) } : { leftWidth: clamp(w, leftMin, leftMax) })
   const leftRef = useRef<HTMLDivElement>(null)
   const update = useUpdateItem()
   const ro = useReadOnly()
@@ -195,26 +199,26 @@ export function Timeline({ d }: { d: Data }) {
 
   // Drag the column edge to resize "Plan item"; double-click fits the longest name.
   const beginResize = (e: React.PointerEvent) => {
-    const w0 = leftWidth
-    track(e, 'col-resize', (dx) => useUI.getState().set({ leftWidth: clamp(w0 + dx, LEFT_MIN, LEFT_MAX) }))
+    const w0 = LEFT
+    track(e, 'col-resize', (dx) => setLeft(w0 + dx))
   }
   const fitNames = () => {
     let need = 0
     leftRef.current?.querySelectorAll<HTMLElement>('[data-clip]').forEach((el) => {
       need = Math.max(need, el.scrollWidth - el.clientWidth)
     })
-    ui.set({ leftWidth: clamp(need > 0 ? leftWidth + need + 8 : 340, LEFT_MIN, LEFT_MAX) })
+    setLeft(need > 0 ? LEFT + need + 8 : narrow ? 168 : 340)
   }
   const resizeKeys = (e: React.KeyboardEvent) => {
     const step = e.shiftKey ? 64 : 16
-    if (e.key === 'ArrowLeft') ui.set({ leftWidth: clamp(leftWidth - step, LEFT_MIN, LEFT_MAX) })
-    else if (e.key === 'ArrowRight') ui.set({ leftWidth: clamp(leftWidth + step, LEFT_MIN, LEFT_MAX) })
+    if (e.key === 'ArrowLeft') setLeft(LEFT - step)
+    else if (e.key === 'ArrowRight') setLeft(LEFT + step)
     else return
     e.preventDefault()
   }
-  const handle = !narrow && (
+  const handle = (
     <div className={s.colHandle} role="separator" aria-orientation="vertical" aria-label="Resize plan item column"
-      aria-valuenow={leftWidth} aria-valuemin={LEFT_MIN} aria-valuemax={LEFT_MAX} tabIndex={0}
+      aria-valuenow={LEFT} aria-valuemin={leftMin} aria-valuemax={leftMax} tabIndex={0}
       title="Drag to resize · double-click to fit names"
       onPointerDown={beginResize} onDoubleClick={fitNames} onKeyDown={resizeKeys} />
   )
@@ -400,7 +404,7 @@ function Toolbar({ d, zoom, sheet, onToday, scale, onScale, onFit }: {
         </div>
       )}
       <button className="btn" onClick={onToday}>Today</button>
-      <button className="chip" aria-pressed={sheet} onClick={() => set({ sheet: !sheet })}
+      <button className={`chip ${s.sheetToggle}`} aria-pressed={sheet} onClick={() => set({ sheet: !sheet })}
         title="Dense sheet mode">
         Sheet
       </button>

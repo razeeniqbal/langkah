@@ -81,3 +81,10 @@
   .foot { margin: 0; padding: 8px 4px; }
   .footBtn { justify-content: center; padding: 0; }
 }
+
+/* Phone menu sheet (rows reuse the sidebar row styles). */
+.sheetList { display: flex; flex-direction: column; gap: 4px; padding: 4px 10px 10px; overflow-y: auto; }
+.sheetList .row { height: 52px; justify-content: flex-start; padding: 0 12px; }
+.sheetList .pct { padding-right: 0; }
+.sheetFoot { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px 12px; border-top: 1px solid var(--line); }
+.sheetFoot .footBtn { height: 48px; justify-content: flex-start; padding: 0 12px; font-size: 14.5px; }

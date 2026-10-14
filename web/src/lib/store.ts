@@ -35,6 +35,8 @@ interface UI {
   sheet: boolean
   uiScale: number // whole-app display size (CSS zoom); phones always use 1
   leftWidth: number // px, timeline "Plan item" column
+  leftWidthPhone: number // the same column on phones
+  menu: boolean // phone: project / settings sheet
   timeScale: Record<Zoom, number> // multiplier on the zoom's pixels-per-day
   collapsed: Record<string, boolean>
   filters: Filters
@@ -109,6 +111,8 @@ export const useUI = create<UI>()(
       sheet: false,
       uiScale: 0.9,
       leftWidth: 340,
+      leftWidthPhone: 168,
+      menu: false,
       timeScale: { week: 1, month: 1, quarter: 1 },
       collapsed: {},
       filters: noFilters,
@@ -126,7 +130,7 @@ export const useUI = create<UI>()(
       set: (p) => set(p),
       setView: (view) => set({ view }),
       setProject: (projectId) =>
-        set((s) => ({ projectId, filters: { ...s.filters, planItemIds: [], assigneeIds: [] } })),
+        set((s) => ({ projectId, menu: false, filters: { ...s.filters, planItemIds: [], assigneeIds: [] } })),
       setFilter: (k, v) => set((s) => ({ filters: { ...s.filters, [k]: v } })),
       clearFilters: () => set((s) => ({ filters: { ...noFilters, myWork: s.filters.myWork } })),
       toggleSection: (key) => set((s) => ({ collapsed: { ...s.collapsed, [key]: !s.collapsed[key] } })),
@@ -157,6 +161,7 @@ export const useUI = create<UI>()(
         sheet: s.sheet,
         uiScale: s.uiScale,
         leftWidth: s.leftWidth,
+        leftWidthPhone: s.leftWidthPhone,
         timeScale: s.timeScale,
         collapsed: s.collapsed,
         filters: { ...noFilters, myWork: s.filters.myWork, hideDone: s.filters.hideDone },

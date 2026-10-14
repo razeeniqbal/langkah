@@ -111,10 +111,13 @@
 
 @media (max-width: 1520px) { .legend { display: none; } }
 @media (max-width: 720px) {
-  .toolbar { padding: 12px 14px 10px; flex-wrap: nowrap; gap: 8px; overflow-x: auto; scrollbar-width: none; }
-  .toolbar::-webkit-scrollbar { display: none; }
-  .toolbar > * { flex: none; }
-  .tools { margin-left: 0; flex-wrap: nowrap; }
+  /* Stats and actions on the first row; controls wrap below instead of running off-screen. */
+  .toolbar { padding: 12px 14px 10px; flex-wrap: wrap; gap: 10px 8px; }
+  .tools { order: 3; width: 100%; margin-left: 0; flex-wrap: wrap; gap: 8px; }
+  .sheetToggle { display: none; } /* drawing-sheet mode is for big screens and print */
+  /* A wider grab area for fingers. */
+  .colHandle { width: 22px; right: -11px; }
+  .colHandle::after { left: 9px; opacity: 0.35; }
   .legend { display: none; }
   .frame { margin: 0 14px 14px; }
   .sheet { margin: 6px 14px 14px; }

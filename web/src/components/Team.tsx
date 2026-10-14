@@ -56,7 +56,7 @@ export function Team({ d }: { d: Data }) {
       )}
       {d.all && (
         <p className={`muted ${s.note}`}>
-          Everyone across all projects. Pick a project in the sidebar to add or remove people from its team.
+          Everyone across all projects. Pick a project to add or remove people from its team.
         </p>
       )}
 
@@ -88,17 +88,17 @@ export function Team({ d }: { d: Data }) {
                     </div>
                   </td>
                   {d.all && (
-                    <td className={`mono muted ${s.hideSm}`}>
+                    <td className={`mono muted ${s.projects}`} data-label="Projects">
                       {p.projectIds.map((id) => d.projectById.get(id)?.code).filter(Boolean).join(' · ')}
                     </td>
                   )}
-                  <td className={s.n}>
+                  <td className={s.n} data-label="Open cards">
                     <button className={s.link} onClick={() => showCards(p)} title="Show on board">{open}</button>
                   </td>
-                  <td className={`num ${s.n}`}>{points}</td>
-                  <td className={`num ${s.n} ${late ? s.late : ''}`}>{late}</td>
-                  <td className={`num ${s.n} ${s.hideSm}`}>{owned}</td>
-                  <td className={s.load}>
+                  <td className={`num ${s.n}`} data-label="Open pts">{points}</td>
+                  <td className={`num ${s.n} ${late ? s.late : ''}`} data-label="Late">{late}</td>
+                  <td className={`num ${s.n}`} data-label="Items owned">{owned}</td>
+                  <td className={s.load} data-label="Workload">
                     <div className={s.loadBar} title={`${points} open points`}>
                       <i style={{ transform: `scaleX(${points / maxPoints})` }} />
                     </div>

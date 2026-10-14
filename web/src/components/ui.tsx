@@ -170,8 +170,10 @@ export function MultiSelect({ label, all, noun, options, value, onChange, classN
         <span className={s.msSummary}>{summary}</span>
         {value.length > 1 && <span className={`num ${s.msCount}`}>{value.length}</span>}
       </button>
+      {open && <div className={s.msBackdrop} onClick={() => setOpen(false)} aria-hidden="true" />}
       {open && (
         <div className={s.msPanel} role="listbox" aria-multiselectable="true" aria-label={label}>
+          <div className={`mono muted ${s.msTitle}`}>{label}</div>
           {options.length > 8 && (
             <input className={`input ${s.msSearch}`} placeholder={`Find ${noun}…`} value={q} autoFocus
               onChange={(e) => setQ(e.target.value)} />
@@ -194,7 +196,10 @@ export function MultiSelect({ label, all, noun, options, value, onChange, classN
           </div>
           <div className={s.msFoot}>
             <span className="mono muted">{value.length ? `${value.length} selected` : all}</span>
-            <button type="button" className="btn ghost" disabled={!value.length} onClick={() => onChange([])}>Clear</button>
+            <span className={s.msActions}>
+              <button type="button" className="btn ghost" disabled={!value.length} onClick={() => onChange([])}>Clear</button>
+              <button type="button" className={`btn primary ${s.msDone}`} onClick={() => setOpen(false)}>Done</button>
+            </span>
           </div>
         </div>
       )}

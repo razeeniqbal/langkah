@@ -113,3 +113,17 @@
   .actions :global(.btn) { width: 40px; padding: 0; }
   .actLabel { display: none; }
 }
+
+/* Title as a project switcher on phones only. */
+.titleBtn { display: none; }
+@media (max-width: 720px) {
+  .title { display: none; }
+  .titleBtn {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; flex: 1;
+    padding: 4px 0; border: 0; background: none; text-align: left; color: inherit;
+  }
+  .titleRow { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+  .titleRow h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .titleRow svg { flex: none; transform: rotate(90deg); color: var(--gold); }
+  .jump { width: 44px; height: 44px; padding: 0; justify-content: center; }
+}

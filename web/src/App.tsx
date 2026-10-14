@@ -5,7 +5,7 @@ import { Drawer } from './components/Editors'
 import { Header } from './components/Header'
 import { Login } from './components/Login'
 import { Notes } from './components/Notes'
-import { Sidebar } from './components/Sidebar'
+import { MobileMenu, Sidebar } from './components/Sidebar'
 import { Team } from './components/Team'
 import { Timeline } from './components/Timeline'
 import { Empty, Icon, Toasts } from './components/ui'
@@ -89,7 +89,8 @@ function useShortcuts(defaultProjectId: string | null) {
         return
       }
       if (e.key === 'Escape') {
-        if (ui.palette) ui.set({ palette: false })
+        if (ui.menu) ui.set({ menu: false })
+        else if (ui.palette) ui.set({ palette: false })
         else if (ui.editor) ui.close()
         return
       }
@@ -155,6 +156,7 @@ export function App() {
       </main>
       <Drawer d={d} />
       <CommandPalette d={d} />
+      <MobileMenu d={d} />
       <Toasts />
     </div>
   )

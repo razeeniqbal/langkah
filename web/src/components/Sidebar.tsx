@@ -6,11 +6,64 @@ import { Icon } from './ui'
 import s from './Sidebar.module.css'
 
 const NEXT_THEME: Record<Theme, Theme> = { system: 'light', light: 'dark', dark: 'system' }
+const pct = (v: number | undefined) => `${Math.round(v ?? 0)}%`
+
+/** Phones: projects and settings in a sheet that slides up from the bottom. */
+export function MobileMenu({ d }: { d: Data }) {
+  const ui = useUI()
+  const ro = ui.role === 'view'
+  if (!ui.menu) return null
+  const close = () => ui.set({ menu: false })
+  return (
+    <div className="sheetBackdrop" onClick={(e) => e.target === e.currentTarget && close()}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label="Projects and settings">
+        <div className="sheetHead">
+          <span className="mono muted">Projects</span>
+          <button className="btn ghost icon" onClick={close} aria-label="Close"><Icon name="close" /></button>
+        </div>
+        <nav className={s.sheetList}>
+          <button className={s.row} aria-current={d.all || undefined} onClick={() => ui.setProject('all')}>
+            <span className={`${s.code} ${s.allCode}`}><Icon name="sigma" size={16} /></span>
+            <span className={s.name}>All projects</span>
+            <span className={s.pct}>{pct(d.overallAll)}</span>
+          </button>
+          {d.projects.filter((p) => !p.archived).map((p) => (
+            <button key={p.id} className={s.row} aria-current={d.project?.id === p.id || undefined} onClick={() => ui.setProject(p.id)}>
+              <span className={s.code}>{p.code}</span>
+              <span className={s.name}>{p.name}</span>
+              <span className={s.pct}>{pct(d.projectProgress.get(p.id))}</span>
+            </button>
+          ))}
+          {!ro && (
+            <button className={`${s.row} ${s.add}`} onClick={() => ui.open({ kind: 'project' })}>
+              <span className={`${s.code} ${s.addCode}`}><Icon name="plus" size={12} /></span>
+              <span className={s.name}>New project</span>
+            </button>
+          )}
+        </nav>
+        <div className={s.sheetFoot}>
+          <button className={s.footBtn} onClick={() => ui.set({ menu: false, palette: true })}>
+            <Icon name="search" size={16} /><span>Search everything</span>
+          </button>
+          <button className={s.footBtn} onClick={() => ui.set({ theme: NEXT_THEME[ui.theme] })}>
+            <Icon name={ui.theme === 'light' ? 'sun' : 'moon'} size={16} />
+            <span>Theme · <span className={s.themeName}>{ui.theme}</span></span>
+          </button>
+          {ui.authRequired && (
+            <button className={s.footBtn} onClick={() => { close(); signOut() }}>
+              <Icon name={ro ? 'edit' : 'close'} size={16} />
+              <span>{ro ? 'View only · Sign in to edit' : 'Sign out'}</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function Sidebar({ d }: { d: Data }) {
   const ui = useUI()
   const ro = ui.role === 'view'
-  const pct = (v: number | undefined) => `${Math.round(v ?? 0)}%`
 
   return (
     <aside className={s.side} aria-label="Projects">

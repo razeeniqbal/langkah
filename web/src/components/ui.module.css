@@ -65,3 +65,27 @@
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 6px 6px 6px 12px; border-top: 1px solid var(--line); font-size: 10px;
 }
+
+.msBackdrop, .msTitle, .msDone { display: none; }
+.msActions { display: flex; gap: 6px; }
+/* Phones: the list slides up from the bottom instead of dropping down (the
+   filter row scrolls sideways and would clip it). */
+@media (max-width: 720px) {
+  .msBackdrop { display: block; position: fixed; inset: 0; z-index: 59; background: var(--overlay); }
+  .msPanel {
+    position: fixed; top: auto; left: 0; right: 0; bottom: 0; z-index: 60;
+    width: auto; max-width: none; max-height: 80dvh;
+    border-radius: 14px 14px 0 0; border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: sheetUp 220ms var(--ease-out);
+  }
+  .msTitle { display: block; padding: 14px 16px 2px; font-size: 10.5px; }
+  .msSearch { margin: 10px 12px 4px; flex: none; }
+  .msList { max-height: none; flex: 1; min-height: 0; }
+  .msGroup { padding: 12px 16px 4px; }
+  .msOption { padding: 11px 16px; gap: 12px; font-size: 15px; }
+  .msOption span { white-space: normal; }
+  .msOption input { width: 20px; height: 20px; }
+  .msFoot { padding: 10px 12px; }
+  .msDone { display: inline-flex; }
+}

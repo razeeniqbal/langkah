@@ -33,11 +33,32 @@ export function Board({ d }: { d: Data }) {
     }
   }
 
+  // Phones: one column at a time, with a tab row to jump between them.
+  const columns = useRef<HTMLDivElement>(null)
+  const [shown, setShown] = useState(0)
+  const onScroll = () => {
+    const el = columns.current
+    if (!el) return
+    const first = el.firstElementChild as HTMLElement | null
+    const step = first ? first.offsetWidth + parseFloat(getComputedStyle(el).columnGap || '0') : el.clientWidth
+    setShown(Math.max(0, Math.min(STATUSES.length - 1, Math.round(el.scrollLeft / step))))
+  }
+  const jump = (i: number) =>
+    (columns.current?.children[i] as HTMLElement | undefined)?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+
   return (
     <div className={s.wrap}>
       <ItemStrip d={d} />
+      <div className={s.tabs} role="tablist" aria-label="Status">
+        {STATUSES.map((st, i) => (
+          <button key={st.id} role="tab" aria-selected={shown === i} data-status={st.id} onClick={() => jump(i)}>
+            {st.label}
+            <span className="num">{d.visibleCards.filter((c) => c.status === st.id).length}</span>
+          </button>
+        ))}
+      </div>
       <DndContext sensors={sensors} onDragStart={onStart} onDragEnd={onEnd} onDragCancel={() => setActive(null)}>
-        <div className={s.columns}>
+        <div ref={columns} className={s.columns} onScroll={onScroll}>
           {STATUSES.map((st) => (
             <Column key={st.id} d={d} status={st.id} label={st.label} credit={st.credit}
               cards={d.visibleCards.filter((c) => c.status === st.id)} />
@@ -147,7 +168,7 @@ const CardTile = memo(function CardTile({ d, card, overlay }: { d: Data; card: C
     <article className={s.card} data-overlay={overlay || undefined} data-settle={settling || undefined}
       data-done={card.status === 'done' || undefined}
       onClick={(e) => {
-        if (!editing && !(e.target as HTMLElement).closest('button,input')) ui.open({ kind: 'card', id: card.id })
+        if (!editing && !(e.target as HTMLElement).closest('button,input,select')) ui.open({ kind: 'card', id: card.id })
       }}>
       {editing === 'title' ? (
         <InlineInput initial={card.title} {...stop}
@@ -182,6 +203,17 @@ const CardTile = memo(function CardTile({ d, card, overlay }: { d: Data; card: C
         <span className={s.spacer} />
         <span className={`num ${s.pts}`} title={`${card.points} effort points`}>{card.points}</span>
       </footer>
+      {/* Touch screens can't drag cards: move them with a status picker instead. */}
+      {!ro && !overlay && (
+        <select className={`select ${s.statusPick}`} value={card.status} aria-label="Move to status" {...stop}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            useUI.getState().set({ settling: card.id })
+            update.mutate({ id: card.id, status: e.target.value as Status })
+          }}>
+          {STATUSES.map((st) => <option key={st.id} value={st.id}>{st.label}</option>)}
+        </select>
+      )}
     </article>
   )
 })

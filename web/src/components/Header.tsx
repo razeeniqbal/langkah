@@ -26,6 +26,15 @@ export function Header({ d }: { d: Data }) {
           <span className="mono muted">{d.all ? 'Sheet' : `Project · ${d.project!.code}`}</span>
           <h1>{d.all ? 'All projects' : d.project!.name}</h1>
         </div>
+        {/* Phones have no sidebar: the title opens the project / settings sheet. */}
+        <button className={s.titleBtn} onClick={() => ui.set({ menu: true })} aria-haspopup="dialog"
+          aria-label={`Switch project. Current: ${d.all ? 'All projects' : d.project!.name}`}>
+          <span className="mono muted">{d.all ? 'Sheet' : `Project · ${d.project!.code}`}</span>
+          <span className={s.titleRow}>
+            <h1>{d.all ? 'All projects' : d.project!.name}</h1>
+            <Icon name="chevron" size={14} />
+          </span>
+        </button>
         <button className={s.jump} onClick={() => ui.set({ palette: true })} title="Search everything (Ctrl K)">
           <Icon name="search" size={16} />
           <span className={s.jumpText}>Search projects, plan items, cards…</span>
