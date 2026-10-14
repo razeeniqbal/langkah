@@ -352,8 +352,11 @@ export function Timeline({ d }: { d: Data }) {
                 const end = g ? g.dEnd : toDay(item.end)
                 const hasCards = cards.length > 0
                 const progress = g?.mode === 'knob' ? g.dProgress : pending[item.id] ?? ip?.progress ?? item.manualProgress
-                // Knob only where the % is typed: no cards, or switched to manual.
-                const knob = !ro && (!hasCards || item.progressMode === 'manual')
+                // Every bar has a knob (not in view-only). On an item driven by its
+                // cards, dragging it switches the item to manual progress.
+                const knob = ro ? null : hasCards && item.progressMode === 'auto'
+                  ? 'Drag to set progress by hand (switches this item from cards to Manual)'
+                  : 'Drag to set progress'
                 const behind = isBehind(item, progress, d.today)
                 return (
                   <ItemBar key={item.id} item={item} y={y} ROW={ROW} x={x} ppd={ppd} start={start} end={end}
@@ -570,7 +573,7 @@ interface Marker { id: string; x: number; title: string; tone: 'done' | 'late' |
 
 function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dragging, sheet, markers, onBegin }: {
   item: PlanItem; y: number; ROW: number; x: (d: number) => number; ppd: number; start: number; end: number
-  progress: number; behind: boolean; knob: boolean; dragging: Drag | null; sheet: boolean; markers: Marker[]
+  progress: number; behind: boolean; knob: string | null; dragging: Drag | null; sheet: boolean; markers: Marker[]
   onBegin: (e: React.PointerEvent, mode: Drag['mode']) => void
 }) {
   const stroke = behind ? 'var(--danger)' : 'var(--bar-line)'
@@ -610,7 +613,7 @@ function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dra
       <rect x={x1 + w - 4} y={by - 2} width={7} height={bh + 4} className={s.handle} onPointerDown={(e) => onBegin(e, 'end')} />
       {knob && (
         <g className={s.knob} onPointerDown={(e) => onBegin(e, 'knob')}>
-          <title>Drag to set progress manually</title>
+          <title>{knob}</title>
           <rect x={kx - 7} y={by + bh - 2} width={14} height={10} fill="transparent" />
           <path d={`M${kx} ${by + bh - 1} l4.5 6 h-9 z`} fill="var(--gold)" />
         </g>

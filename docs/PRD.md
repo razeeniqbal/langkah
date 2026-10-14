@@ -73,7 +73,7 @@ The app has four views (Board, Timeline, Team, Notes) scoped by the selected pro
 | T1 | Rows grouped by project (All projects only) then section, each with a summary bar | Must |
 | T2 | Drag a bar to move it, drag either end to change dates | Must |
 | T3 | Milestones as diamonds on a single date, draggable | Must |
-| T4 | Progress fill from linked cards; a manual knob only when the item has no cards or is set to manual | Must |
+| T4 | Progress fill from linked cards, or the manual % when the item has no cards or is set to manual; every bar has a knob, and dragging it on a card-driven item switches it to manual | Must |
 | T5 | Zoom levels: Week, Month, Quarter; Today button scrolls to today | Must |
 | T6 | Today line, weekend shading, behind schedule items flagged | Must |
 | T7 | Each row shows owner monogram and a card counter (done of total) that opens the filtered board | Must |
