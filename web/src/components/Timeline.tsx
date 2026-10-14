@@ -74,10 +74,12 @@ export function Timeline({ d }: { d: Data }) {
   const { zoom, sheet, collapsed, leftWidth } = ui
   const scale = ui.timeScale?.[zoom] ?? 1
   const ppd = PPD[zoom] * scale
-  const ROW = sheet ? 26 : 34
   const narrow = useNarrow()
-  // Phones keep their own, narrower column width.
-  const LEFT = narrow ? ui.leftWidthPhone ?? 168 : leftWidth
+  // Phones: no name column. Each row stacks the name above its bar, so the
+  // chart gets the full screen width.
+  const stack = narrow
+  const ROW = stack ? 52 : sheet ? 26 : 34
+  const LEFT = stack ? 0 : leftWidth
   const leftMax = narrow ? Math.max(LEFT_MIN_PHONE, window.innerWidth - 110) : LEFT_MAX
   const leftMin = narrow ? LEFT_MIN_PHONE : LEFT_MIN
   const setLeft = (w: number) => useUI.getState().set(narrow ? { leftWidthPhone: clamp(w, leftMin, leftMax) } : { leftWidth: clamp(w, leftMin, leftMax) })
@@ -216,7 +218,7 @@ export function Timeline({ d }: { d: Data }) {
     else return
     e.preventDefault()
   }
-  const handle = (
+  const handle = !stack && (
     <div className={s.colHandle} role="separator" aria-orientation="vertical" aria-label="Resize plan item column"
       aria-valuenow={LEFT} aria-valuemin={leftMin} aria-valuemax={leftMax} tabIndex={0}
       title="Drag to resize · double-click to fit names"
@@ -311,8 +313,8 @@ export function Timeline({ d }: { d: Data }) {
         <div ref={scroller} className={s.scroller} data-dragging={drag?.mode ?? undefined}>
           <div className={s.grid} style={{ gridTemplateColumns: `${LEFT}px ${W}px`, paddingBottom: sheet ? 96 : 24 }}>
             <div className={s.corner} style={{ height: HEAD }}>
-              <span className="mono muted">Plan item</span>
-              <span className="mono muted">{narrow ? '' : 'Cards · Owner'}</span>
+              {!stack && <span className="mono muted">Plan item</span>}
+              {!stack && <span className="mono muted">Cards · Owner</span>}
               {handle}
             </div>
             <svg className={s.scale} width={W} height={HEAD} aria-hidden="true" onPointerDown={beginStretch}
@@ -321,10 +323,10 @@ export function Timeline({ d }: { d: Data }) {
               <Scale d0={d0} d1={d1} x={x} ppd={ppd} zoom={zoom} today={today} sheet={sheet} />
             </svg>
 
-            <div ref={leftRef} className={s.left} style={{ width: LEFT }}>
+            <div ref={leftRef} className={`${s.left} ${stack ? s.stackLeft : ''}`} style={{ width: LEFT }}>
               {handle}
               {rows.map((r) => (
-                <LeftRow key={r.key} row={r} d={d} height={ROW} narrow={narrow} />
+                <LeftRow key={r.key} row={r} d={d} height={ROW} narrow={narrow} stack={stack} />
               ))}
             </div>
 
@@ -346,7 +348,7 @@ export function Timeline({ d }: { d: Data }) {
                   const sp = span(r.items.filter((i) => !i.milestone).length ? r.items.filter((i) => !i.milestone) : r.items)
                   if (!sp) return null
                   const p = r.kind === 'project' ? d.projectProgress.get(r.project.id) ?? 0 : d.sectionProgress.get(`${r.projectId}:${r.section}`) ?? 0
-                  return <SummaryBar key={r.key} x1={x(sp[0])} x2={x(sp[1] + 1)} y={y} ROW={ROW} progress={p} strong={r.kind === 'project'} />
+                  return <SummaryBar key={r.key} x1={x(sp[0])} x2={x(sp[1] + 1)} y={y} ROW={ROW} progress={p} strong={r.kind === 'project'} stack={stack} />
                 }
                 const item = r.item
                 const ip = d.progress.get(item.id)
@@ -364,7 +366,7 @@ export function Timeline({ d }: { d: Data }) {
                 const behind = isBehind(item, progress, d.today)
                 return (
                   <ItemBar key={item.id} item={item} y={y} ROW={ROW} x={x} ppd={ppd} start={start} end={end}
-                    progress={progress} behind={behind} knob={knob} dragging={g} sheet={sheet}
+                    progress={progress} behind={behind} knob={knob} dragging={g} sheet={sheet} stack={stack}
                     markers={cards.filter((c) => c.due).map((c) => ({
                       id: c.id, x: x(toDay(c.due!)) + ppd / 2, title: `${c.title} · due ${short(c.due)}`,
                       tone: c.status === 'done' ? 'done' : isLate(c, d.today) ? 'late' : 'open',
@@ -392,13 +394,15 @@ function Toolbar({ d, zoom, sheet, onToday, scale, onScale, onFit }: {
       <div className={s.tools}>
       <div className="seg" role="group" aria-label="Zoom">
         {(['week', 'month', 'quarter'] as Zoom[]).map((z) => (
-          <button key={z} aria-pressed={zoom === z} onClick={() => set({ zoom: z })}>{z}</button>
+          <button key={z} aria-pressed={zoom === z} onClick={() => set({ zoom: z })} aria-label={z}>
+            <span className={s.zLong}>{z}</span><span className={s.zShort}>{z[0].toUpperCase()}</span>
+          </button>
         ))}
       </div>
       {onScale && onFit && (
         <div className="seg" role="group" aria-label="Timeline scale">
           <button onClick={() => onScale(1 / 1.25)} aria-label="Compress timeline" title="Compress (Ctrl + scroll)">−</button>
-          <button className="num" onClick={() => onScale(0)} title="Reset scale">{Math.round((scale ?? 1) * 100)}%</button>
+          <button className={`num ${s.pctBtn}`} onClick={() => onScale(0)} title="Reset scale">{Math.round((scale ?? 1) * 100)}%</button>
           <button onClick={() => onScale(1.25)} aria-label="Stretch timeline" title="Stretch (Ctrl + scroll)">+</button>
           <button onClick={onFit} title="Fit the whole plan in view">Fit</button>
         </div>
@@ -420,8 +424,9 @@ function Toolbar({ d, zoom, sheet, onToday, scale, onScale, onFit }: {
   )
 }
 
-function LeftRow({ row, d, height, narrow }: { row: Row; d: Data; height: number; narrow: boolean }) {
+function LeftRow({ row, d, height, narrow, stack }: { row: Row; d: Data; height: number; narrow: boolean; stack: boolean }) {
   const ui = useUI()
+  if (stack) return <StackLabel row={row} d={d} height={height} />
   if (row.kind === 'project' || row.kind === 'section') {
     const open = !ui.collapsed[row.key]
     const p = row.kind === 'project'
@@ -464,6 +469,42 @@ function LeftRow({ row, d, height, narrow }: { row: Row; d: Data; height: number
         </button>
       )}
       <Monogram person={owner} small />
+    </div>
+  )
+}
+
+/** Phones: the row's name sits on its top line, floating over the chart; the bar is drawn below it. */
+function StackLabel({ row, d, height }: { row: Row; d: Data; height: number }) {
+  const ui = useUI()
+  if (row.kind === 'project' || row.kind === 'section') {
+    const open = !ui.collapsed[row.key]
+    const p = row.kind === 'project'
+      ? d.projectProgress.get(row.project.id) ?? 0
+      : d.sectionProgress.get(`${row.projectId}:${row.section}`) ?? 0
+    return (
+      <div className={`${s.stackRow} ${s.stackGroup}`} style={{ height }}>
+        <button className={s.stackPill} aria-expanded={open} onClick={() => ui.toggleSection(row.key)}>
+          <span className={s.chev} data-open={open || undefined}><Icon name="chevron" size={11} /></span>
+          {row.kind === 'project' && <span className={s.code}>{row.project.code}</span>}
+          <span className={s.stackName}>{row.kind === 'project' ? row.project.name : row.section || 'No section'}</span>
+          <span className={`num ${s.groupPct}`}>{Math.round(p)}%</span>
+        </button>
+      </div>
+    )
+  }
+  const item = row.item
+  const ip = d.progress.get(item.id)
+  const behind = isBehind(item, ip?.progress ?? item.manualProgress, d.today)
+  const owner = item.ownerId ? d.personById.get(item.ownerId) : null
+  return (
+    <div className={s.stackRow} style={{ height }}>
+      <button className={s.stackPill} onClick={() => ui.open({ kind: 'item', id: item.id })}
+        title={`${item.title} · ${short(item.start)} → ${short(item.end)}`}>
+        {item.milestone && <span className={s.msDot} aria-label="Milestone" />}
+        <span className={s.stackName}>{item.title}</span>
+        {behind && <span className="tag late">Behind</span>}
+        {owner && <Monogram person={owner} small />}
+      </button>
     </div>
   )
 }
@@ -560,9 +601,11 @@ function Grid({ d0, d1, x, ppd, zoom, H, sheet, rows, ROW }: {
   return <g>{els}</g>
 }
 
-function SummaryBar({ x1, x2, y, ROW, progress, strong }: { x1: number; x2: number; y: number; ROW: number; progress: number; strong: boolean }) {
+function SummaryBar({ x1, x2, y, ROW, progress, strong, stack }: {
+  x1: number; x2: number; y: number; ROW: number; progress: number; strong: boolean; stack?: boolean
+}) {
   const h = strong ? 8 : 6
-  const by = y + ROW / 2 - h / 2
+  const by = stack ? y + ROW - h - 10 : y + ROW / 2 - h / 2
   const w = Math.max(x2 - x1, 2)
   return (
     <g>
@@ -575,9 +618,9 @@ function SummaryBar({ x1, x2, y, ROW, progress, strong }: { x1: number; x2: numb
 
 interface Marker { id: string; x: number; title: string; tone: 'done' | 'late' | 'open' }
 
-function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dragging, sheet, markers, onBegin }: {
+function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dragging, sheet, stack, markers, onBegin }: {
   item: PlanItem; y: number; ROW: number; x: (d: number) => number; ppd: number; start: number; end: number
-  progress: number; behind: boolean; knob: string | null; dragging: Drag | null; sheet: boolean; markers: Marker[]
+  progress: number; behind: boolean; knob: string | null; dragging: Drag | null; sheet: boolean; stack?: boolean; markers: Marker[]
   onBegin: (e: React.PointerEvent, mode: Drag['mode']) => void
 }) {
   const stroke = behind ? 'var(--danger)' : 'var(--bar-line)'
@@ -586,7 +629,7 @@ function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dra
     : `${Math.round(progress)}%`
 
   if (item.milestone) {
-    const cx = x(start) + ppd / 2, cy = y + ROW / 2, r = sheet ? 6 : 7
+    const cx = x(start) + ppd / 2, cy = stack ? y + ROW - 17 : y + ROW / 2, r = sheet ? 6 : 7
     return (
       <g className={s.ms} onPointerDown={(e) => onBegin(e, 'move')}>
         <title>{`${item.title} · ${long(fromDay(start))}`}</title>
@@ -601,7 +644,7 @@ function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dra
   }
 
   const bh = sheet ? 10 : 14
-  const by = y + (ROW - bh) / 2 - (markers.length ? 2 : 0)
+  const by = stack ? y + ROW - bh - 12 : y + (ROW - bh) / 2 - (markers.length ? 2 : 0)
   const x1 = x(start)
   const w = (end - start + 1) * ppd
   const kx = x1 + (w * progress) / 100

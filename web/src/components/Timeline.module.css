@@ -115,12 +115,33 @@
   .toolbar { padding: 12px 14px 10px; flex-wrap: wrap; gap: 10px 8px; }
   .tools { order: 3; width: 100%; margin-left: 0; flex-wrap: wrap; gap: 8px; }
   .sheetToggle { display: none; } /* drawing-sheet mode is for big screens and print */
-  /* A wider grab area for fingers. */
-  .colHandle { width: 22px; right: -11px; }
-  .colHandle::after { left: 9px; opacity: 0.35; }
+  .frame { margin: 0 8px 8px; }
+  .zLong, .pctBtn { display: none; }
+  .zShort { display: inline; }
   .legend { display: none; }
   .frame { margin: 0 14px 14px; }
   .sheet { margin: 6px 14px 14px; }
   .itemRow { padding-left: 10px; }
   .titleBlock { display: none; }
 }
+
+@media (min-width: 721px) { .zShort { display: none; } }
+
+/* Phones: stacked rows. The name column has zero width; each label floats over
+   the chart on its row's top line (only the label itself takes taps, so bars
+   underneath stay draggable). */
+.stackLeft { border-right: 0; background: none; z-index: 3; }
+.stackRow {
+  width: calc(100vw - 34px); display: flex; align-items: flex-start; padding: 5px 8px 0;
+  pointer-events: none;
+}
+.stackGroup { border-top: 1px solid var(--line); }
+.stackPill {
+  pointer-events: auto;
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; height: 24px; padding: 0 6px;
+  border: 0; border-radius: 5px; text-align: left; font-size: 13px; font-weight: 600; color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+.stackPill:active { color: var(--gold); }
+.stackName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stackGroup .stackName { font-weight: 700; }
