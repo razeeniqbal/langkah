@@ -82,10 +82,10 @@ CARD_PROGRESS_SQL = f"COALESCE(ROUND(100.0 * SUM(c.points * {CREDIT_SQL}) / NULL
 def progress_view_sql() -> str:
     """plan_item_progress: one row per plan item with its computed progress.
 
-    Progress only comes from linked cards: sum(points * credit) / sum(points),
-    or 0 when the item has no cards. manual_progress / progress_mode are kept
-    in the table for old data but no longer used.
+    progress = sum(points * credit) / sum(points) when the item has cards and is
+    in auto mode, otherwise manual_progress (typed in or set with the knob).
     """
+    auto = "COUNT(c.id) > 0 AND p.progress_mode = 'auto'"
     return f"""
 CREATE VIEW {P}plan_item_progress AS
 SELECT
@@ -98,11 +98,12 @@ SELECT
   {_days_sql()} AS days,
   COUNT(c.id) AS card_count,
   COALESCE(SUM(CASE WHEN c.status = 'done' THEN 1 ELSE 0 END), 0) AS cards_done,
-  'auto' AS effective_mode,
-  {CARD_PROGRESS_SQL} AS progress
+  CASE WHEN {auto} THEN 'auto' ELSE 'manual' END AS effective_mode,
+  CASE WHEN {auto} THEN {CARD_PROGRESS_SQL} ELSE p.manual_progress END AS progress
 FROM {P}plan_items p
 LEFT JOIN {P}cards c ON c.plan_item_id = p.id
-GROUP BY p.id, p.project_id, p.section, p.milestone, p.start_date, p.end_date
+GROUP BY p.id, p.project_id, p.section, p.milestone, p.start_date, p.end_date,
+         p.progress_mode, p.manual_progress
 """
 
 

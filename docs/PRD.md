@@ -73,7 +73,7 @@ The app has four views (Board, Timeline, Team, Notes) scoped by the selected pro
 | T1 | Rows grouped by project (All projects only) then section, each with a summary bar | Must |
 | T2 | Drag a bar to move it, drag either end to change dates | Must |
 | T3 | Milestones as diamonds on a single date, draggable | Must |
-| T4 | Progress fill from linked cards only (0% with no cards); no manual knob | Must |
+| T4 | Progress fill from linked cards; a manual knob only when the item has no cards or is set to manual | Must |
 | T5 | Zoom levels: Week, Month, Quarter; Today button scrolls to today | Must |
 | T6 | Today line, weekend shading, behind schedule items flagged | Must |
 | T7 | Each row shows owner monogram and a card counter (done of total) that opens the filtered board | Must |
@@ -107,7 +107,7 @@ The app has four views (Board, Timeline, Team, Notes) scoped by the selected pro
 | ID | Requirement | Priority |
 |---|---|---|
 | E1 | Card editor: title, linked plan item, project (when unlinked), assignee, status, due date, effort (1, 2, 3, 5, 8), notes | Must |
-| E2 | Plan item editor: title, project, section, owner, start, end, milestone flag, notes, read-only progress from cards, list of linked cards with Add card | Must |
+| E2 | Plan item editor: title, project, section, owner, start, end, milestone flag, progress mode (auto from cards or manual) and manual %, notes, list of linked cards with Add card | Must |
 | E3 | Assignee dropdown lists the project's team first, then other people | Must |
 | E4 | Deleting a plan item keeps its cards on the board, unlinked | Must |
 | E5 | Delete actions ask for a second click to confirm | Must |
@@ -126,7 +126,7 @@ Five stored collections; sections are a text field on plan items, not their own 
 | people | id, name, projectIds (list), isMe (bool), updatedAt |
 | notes | id, projectId (nullable; cleared when the project is deleted), text, order, createdAt, updatedAt |
 
-**Progress comes only from cards.** Plan items on the timeline are not all of the work: a card may have no plan item and still counts toward its project. The progress of any set of cards is its effort weighted credit:
+**Progress of a plan item.** When the item has linked cards and progressMode is auto, progress is the effort weighted credit of its cards:
 
 ```
 progress = Σ(points_i × credit(status_i)) / Σ points_i
@@ -140,9 +140,11 @@ progress = Σ(points_i × credit(status_i)) / Σ points_i
 | Review | 75% |
 | Done | 100% |
 
-A plan item's progress is the credit of its linked cards, or 0% when it has none. `manualProgress` and `progressMode` stay in the data for old imports but are ignored (changed 14 Oct 2026; previously a typed-in % or knob applied when an item had no cards).
+Otherwise progress = manualProgress (typed in the editor or set with the knob). Dragging the knob on an item that has cards sets progressMode to manual. (Briefly cards-only on 14 Oct 2026; restored the same day.)
 
-**Rollups.** A section's progress is the credit of the cards linked to its plan items. A project's progress, and the overall Complete figure, is the credit of every card in scope, linked to a plan item or not.
+Plan items on the timeline are not all of the work: a card may have no plan item and still counts toward its project.
+
+**Rollups** use the same card credit formula. A section's progress is the credit of the cards linked to its plan items. A project's progress, and the overall Complete figure, is the credit of every card in scope, linked to a plan item or not.
 
 **Lateness.** A card is late when due < today and status is not Done. A plan item is behind when end < today and progress < 100%.
 

@@ -66,14 +66,16 @@ def test_moving_card_updates_progress(c):
     assert item_progress(c, it["id"])["progress"] == 100
 
 
-def test_plan_item_progress_only_from_cards(c):
+def test_manual_progress_without_cards_and_manual_mode(c):
     p = mk_project(c)
-    # A typed-in % (old data, prototype import) is ignored.
-    it = mk_item(c, p["id"], manualProgress=40, progressMode="manual")
-    assert item_progress(c, it["id"])["progress"] == 0
+    it = mk_item(c, p["id"], manualProgress=40)
+    assert item_progress(c, it["id"])["progress"] == 40
+    assert item_progress(c, it["id"])["mode"] == "manual"
     mk_card(c, planItemId=it["id"], status="review", points=2)
-    assert item_progress(c, it["id"])["progress"] == 75
+    assert item_progress(c, it["id"])["progress"] == 75  # cards take over once linked
     assert item_progress(c, it["id"])["mode"] == "auto"
+    c.patch(f"/api/plan_items/{it['id']}", json={"progressMode": "manual"})
+    assert item_progress(c, it["id"])["progress"] == 40
 
 
 def test_rollups_come_from_cards_including_unlinked(c):

@@ -246,7 +246,8 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
     if (!f.start || (!f.milestone && (!f.end || f.end < f.start))) return setError('End must be on or after start.')
     const body = {
       title: f.title.trim(), projectId: f.projectId, section: (f.section ?? '').trim(), ownerId: f.ownerId ?? null,
-      start: f.start, end: f.milestone ? f.start : f.end, milestone: !!f.milestone, notes: f.notes ?? '',
+      start: f.start, end: f.milestone ? f.start : f.end, milestone: !!f.milestone, progressMode: f.progressMode,
+      manualProgress: f.manualProgress ?? 0, notes: f.notes ?? '',
     }
     if (existing) update.mutate({ id: existing.id, ...body })
     else create.mutate(body)
@@ -261,7 +262,7 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
         {existing && (
           <div className={s.progress}>
             <div>
-              <div className="mono muted">Progress · {cards.length ? `from ${cards.length} card${cards.length === 1 ? '' : 's'}` : 'no cards yet'}</div>
+              <div className="mono muted">Progress · {progress?.mode === 'auto' ? `from ${cards.length} card${cards.length === 1 ? '' : 's'}` : 'manual'}</div>
               <ProgressBar value={progress?.progress ?? 0} />
             </div>
             <strong><Counter value={progress?.progress ?? 0} /></strong>
@@ -303,6 +304,21 @@ function ItemEditor({ d, id, draft }: { d: Data; id?: string; draft?: Partial<Pl
         <Field label="Notes">
           <textarea className="textarea" rows={3} value={f.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
         </Field>
+        <Field label="Progress mode"
+          hint={f.progressMode === 'auto'
+            ? cards.length ? 'Weighted by card points: In progress 50%, Review 75%, Done 100%.' : 'No cards yet, so the manual value is used.'
+            : 'Typed by hand; linked cards are ignored.'}>
+          <div className="seg" role="group" aria-label="Progress mode">
+            <button type="button" aria-pressed={f.progressMode === 'auto'} onClick={() => set({ progressMode: 'auto' })}>Auto from cards</button>
+            <button type="button" aria-pressed={f.progressMode === 'manual'} onClick={() => set({ progressMode: 'manual' })}>Manual</button>
+          </div>
+        </Field>
+        {(cards.length === 0 || f.progressMode === 'manual') && (
+          <Field label={`Manual progress · ${f.manualProgress ?? 0}%`}>
+            <input type="range" min={0} max={100} step={5} value={f.manualProgress ?? 0} className={s.range}
+              onChange={(e) => set({ manualProgress: Number(e.target.value) })} />
+          </Field>
+        )}
         </fieldset>
 
         {existing && (
