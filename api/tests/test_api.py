@@ -347,3 +347,20 @@ def test_sso_without_password_still_requires_sign_in(sso_on, monkeypatch):
     assert sso_on.get("/api/projects").status_code == 401
     sso_on.cookies.set(sso.COOKIE, sso_token("shared-secret"))
     assert sso_on.get("/api/projects").status_code == 200
+
+
+def test_digest_for_the_portfolio_admin(c):
+    p = mk_project(c)
+    mk_card(c, projectId=p["id"], title="Late one", status="doing", due="2026-10-18")
+    mk_card(c, projectId=p["id"], title="Due soon", status="todo", due="2026-10-24")
+    mk_card(c, projectId=p["id"], title="Far off", status="todo", due="2026-12-01")
+    mk_card(c, projectId=p["id"], title="Done late", status="done", due="2026-10-01")
+    d = c.get("/api/digest", params={"today": "2026-10-21"}).json()
+    assert d["lateCount"] == 1 and d["dueThisWeek"] == 1
+    assert [a["title"] for a in d["attention"]] == ["Late one", "Due soon"]
+    assert d["cards"] == {"backlog": 0, "todo": 2, "doing": 1, "review": 0, "done": 1}
+    assert d["projects"] == [{"code": "DIC", "name": "DIC Abandonment", "progress": d["overall"], "open": 3, "late": 1}]
+
+
+def test_digest_needs_sign_in(locked):
+    assert locked.get("/api/digest").status_code == 401
