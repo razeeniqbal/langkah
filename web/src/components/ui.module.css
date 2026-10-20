@@ -39,11 +39,11 @@
 /* MultiSelect: a select-styled button with a checkbox panel. */
 .ms { position: relative; }
 .msButton { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; cursor: pointer; }
-.msButton[data-active] { border-color: var(--gold); }
+.msButton[data-active] { border-color: var(--brand); }
 .msSummary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .msCount {
   flex: none; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 5px;
-  display: grid; place-items: center; font-size: 10px; background: var(--gold); color: var(--on-gold);
+  display: grid; place-items: center; font-size: 10px; background: var(--brand); color: var(--on-brand);
 }
 .msPanel {
   position: absolute; top: calc(100% + 4px); left: 0; z-index: 30;
@@ -59,7 +59,7 @@
 }
 .msOption:hover { background: var(--elev); }
 .msOption span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.msOption input { flex: none; accent-color: var(--gold); width: 15px; height: 15px; margin: 0; }
+.msOption input { flex: none; accent-color: var(--brand); width: 15px; height: 15px; margin: 0; }
 .msEmpty { padding: 10px 12px; font-size: 13px; }
 .msFoot {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;

@@ -3,6 +3,7 @@ import tempfile
 
 os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL") or "sqlite:///" + os.path.join(tempfile.mkdtemp(), "test.db")
 os.environ.pop("WORKBENCH_PASSWORD", None)
+os.environ.pop("MBR_SSO_SECRET", None)
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -223,7 +224,8 @@ def locked(c, monkeypatch):
 def test_password_required_when_set(locked):
     assert locked.get("/api/projects").status_code == 401
     assert locked.get("/api/auth/status").json() == {
-        "required": True, "ok": False, "role": None, "viewOnly": True, "idleMinutes": 30, "loginEachLoad": True}
+        "required": True, "ok": False, "role": None, "viewOnly": True, "password": True,
+        "idleMinutes": 30, "loginEachLoad": True, "sso": None}
     assert locked.post("/api/auth/login", json={"password": "nope"}).status_code == 401
 
 
@@ -292,3 +294,56 @@ def test_tampered_or_old_cookie_is_rejected(locked):
     assert locked.get("/api/projects").status_code == 401
     locked.cookies.set(auth.COOKIE, sig)  # pre-change cookie format
     assert locked.get("/api/projects").status_code == 401
+
+
+def sso_token(secret: str, sub: str = "razeeniqbal", exp_in: float = 3600) -> str:
+    """Mint a token the way the portfolio does (lib/admin/sso.ts)."""
+    import base64
+    import hashlib
+    import hmac
+    import json
+    import time
+    b64 = lambda b: base64.urlsafe_b64encode(b).rstrip(b"=").decode()  # noqa: E731
+    now = int(time.time())
+    payload = b64(json.dumps({"sub": sub, "iat": now, "exp": now + exp_in}).encode())
+    return f"v1.{payload}.{b64(hmac.new(secret.encode(), f'v1.{payload}'.encode(), hashlib.sha256).digest())}"
+
+
+@pytest.fixture()
+def sso_on(locked, monkeypatch):
+    from app import sso
+    monkeypatch.setattr(sso, "SECRET", "shared-secret")
+    return locked
+
+
+def test_portfolio_cookie_signs_in_to_edit(sso_on):
+    from app import sso
+    st = sso_on.get("/api/auth/status").json()
+    assert st["ok"] is False and st["sso"] == {"login": sso.LOGIN_URL, "logout": sso.LOGOUT_URL, "active": False}
+    sso_on.cookies.set(sso.COOKIE, sso_token("shared-secret"))
+    st = sso_on.get("/api/auth/status").json()
+    assert st["role"] == "edit" and st["sso"]["active"] is True
+    assert st["loginEachLoad"] is False and st["idleMinutes"] == 0
+    assert sso_on.post("/api/projects", json={"name": "SSO", "code": "SS"}).status_code == 201
+
+
+@pytest.mark.parametrize("token", [
+    lambda: sso_token("other-secret"),            # signed with the wrong key
+    lambda: sso_token("shared-secret", exp_in=-1),  # expired
+    lambda: sso_token("shared-secret")[:-2] + "xx",  # tampered signature
+    lambda: "garbage",
+])
+def test_bad_portfolio_cookie_is_rejected(sso_on, token):
+    from app import sso
+    sso_on.cookies.set(sso.COOKIE, token())
+    assert sso_on.get("/api/projects").status_code == 401
+
+
+def test_sso_without_password_still_requires_sign_in(sso_on, monkeypatch):
+    from app import auth, sso
+    monkeypatch.setattr(auth, "PASSWORD", "")
+    st = sso_on.get("/api/auth/status").json()
+    assert st["required"] is True and st["password"] is False and st["ok"] is False
+    assert sso_on.get("/api/projects").status_code == 401
+    sso_on.cookies.set(sso.COOKIE, sso_token("shared-secret"))
+    assert sso_on.get("/api/projects").status_code == 200

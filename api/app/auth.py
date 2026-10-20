@@ -14,6 +14,10 @@ Sessions end when the browser closes (no cookie expiry date), after
 WORKBENCH_IDLE_MINUTES without a request (default 30; each request slides the
 window), and, when WORKBENCH_LOGIN_EACH_LOAD is on (default), the web app signs
 out on every page load so a refresh asks for the password again.
+
+With MBR_SSO_SECRET set, the portfolio admin's sign-in cookie (see sso.py) also
+gives an edit session, checked on every request. The password then becomes a
+fallback, and a deployment with SSO needs no password at all.
 """
 import hashlib
 import hmac
@@ -23,6 +27,7 @@ from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request, Response
 
+from . import sso
 from .schemas import LoginIn
 
 PASSWORD = os.environ.get("WORKBENCH_PASSWORD", "")
@@ -33,12 +38,17 @@ LOGIN_EACH_LOAD = os.environ.get("WORKBENCH_LOGIN_EACH_LOAD", "1") != "0"
 COOKIE = "wb_session"
 # A public deployment (Vercel) must never run without a password.
 PUBLIC = bool(os.environ.get("VERCEL"))
-MISCONFIGURED = PUBLIC and not PASSWORD
+MISCONFIGURED = PUBLIC and not PASSWORD and not sso.enabled()
 
 Role = Literal["edit", "view"]
 READ_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def is_open() -> bool:
+    """Nothing to sign in with: the API is open (local use, or behind Tailscale)."""
+    return not PASSWORD and not sso.enabled()
 
 
 def _sign(role: str, ts: int) -> str:
@@ -51,8 +61,10 @@ def _token(role: Role, ts: int | None = None) -> str:
 
 
 def role_of(request: Request) -> Role | None:
-    if not PASSWORD:
+    if is_open() or sso.verify(request.cookies.get(sso.COOKIE)):
         return "edit"
+    if not PASSWORD:
+        return None
     try:
         role, ts_s, sig = request.cookies.get(COOKIE, "").split(".")
         ts = int(ts_s)
@@ -79,14 +91,18 @@ def set_session(request: Request, response: Response, role: Role) -> None:
 
 @router.get("/status")
 def status(request: Request, response: Response):
+    via_sso = bool(sso.verify(request.cookies.get(sso.COOKIE)))
     role = role_of(request)
     # The web app pings this while you're active but not saving anything.
-    if role and PASSWORD:
+    if role and PASSWORD and not via_sso:
         set_session(request, response, role)
-    return {"required": bool(PASSWORD), "ok": role is not None, "role": role,
+    return {"required": not is_open(), "ok": role is not None, "role": role,
             "viewOnly": bool(PASSWORD) and VIEW_ONLY,
-            "idleMinutes": IDLE_SECONDS / 60 if PASSWORD else 0,
-            "loginEachLoad": bool(PASSWORD) and LOGIN_EACH_LOAD}
+            "password": bool(PASSWORD),
+            # SSO sessions last as long as the portfolio cookie, not the idle window.
+            "idleMinutes": IDLE_SECONDS / 60 if PASSWORD and not via_sso else 0,
+            "loginEachLoad": bool(PASSWORD) and LOGIN_EACH_LOAD and not via_sso,
+            "sso": {"login": sso.LOGIN_URL, "logout": sso.LOGOUT_URL, "active": via_sso} if sso.enabled() else None}
 
 
 @router.post("/login")
