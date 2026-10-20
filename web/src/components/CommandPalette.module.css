@@ -23,6 +23,6 @@
   margin: 0 6px; padding: 7px 8px; border-radius: var(--r); cursor: pointer;
   border: 1px solid transparent;
 }
-.item[data-sel] { border-color: var(--gold); background: var(--gold-weak); }
+.item[data-sel] { border-color: var(--brand); background: var(--brand-weak); }
 .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .none { padding: 18px 14px; }

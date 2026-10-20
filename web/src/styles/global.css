@@ -1,180 +1,198 @@
 /* LANGKAH. — Plan / Track / Deliver.
-   Charcoal-green surfaces layered by tone, 1px borders, 6–8px corners.
-   Gold is the brand accent (primary actions, selection, today, "me");
-   green is reserved for progress. Manrope for the interface, IBM Plex Mono
-   for dates, identifiers and technical metadata. */
+   Shares the madebyrazeen app theme with the AI Engineering course tracker: Apple's
+   dark system palette, grouped surfaces on true black, filled controls, 10–14px corners.
+   Blue is the brand accent (primary actions, selection, today, "me"); green is reserved
+   for progress. System UI font (SF / Segoe UI); monospace only for codes and dates. */
 
 :root,
 :root[data-theme='dark'] {
-  --bg: #0c1412;
-  --surface: #17211e;
-  --surface-2: #111a17;   /* sidebar, table heads, wells */
-  --elev: #1d2925;        /* hover and active rows */
-  --ink: #f2f0e8;
-  --ink-2: #9aa7a1;       /* muted text, AA on bg and surface */
-  --line: #24332e;        /* borders */
-  --line-2: #1a2622;      /* faint grid */
-  --line-strong: #2e3d38;
-  --gold: #d9b968;
-  --gold-weak: rgba(217, 185, 104, 0.12);
-  --on-gold: #14130c;
-  --accent: #64bda2;      /* progress */
-  --accent-weak: rgba(100, 189, 162, 0.12);
-  --on-accent: #0c1412;
-  --mark: var(--gold);
-  --on-mark: var(--on-gold);
-  --warn: #f3bd3e;
-  --danger: #f06b70;
-  --danger-weak: rgba(240, 107, 112, 0.12);
-  --info: #4c9dff;
-  --hatch: #3f4f49;
-  --bar-track: #22302b;
+  --bg: #000000;
+  --surface: #1c1c1e;     /* cards, panels */
+  --surface-2: #0d0d0e;   /* sidebar, table heads, wells */
+  --elev: #2c2c2e;        /* hover and active rows, fields */
+  --fill: rgba(118, 118, 128, 0.24);
+  --fill-strong: rgba(118, 118, 128, 0.36);
+  --ink: #ffffff;
+  --ink-2: #a1a1a8;       /* muted text, 6.9:1 on surface */
+  --line: #38383a;        /* borders, separators */
+  --line-2: #242426;      /* faint grid */
+  --line-strong: #48484a;
+  --brand: #0a84ff;
+  --brand-weak: rgba(10, 132, 255, 0.18);
+  --on-brand: #ffffff;
+  --link: #409cff;
+  --accent: #30d158;      /* progress */
+  --accent-weak: rgba(48, 209, 88, 0.14);
+  --on-accent: #000000;
+  --mark: var(--brand);
+  --on-mark: var(--on-brand);
+  --warn: #ff9f0a;
+  --danger: #ff453a;
+  --danger-weak: rgba(255, 69, 58, 0.14);
+  --info: #64d2ff;
+  --focus: #64d2ff;
+  --monogram: #3a3a3c;
+  --seg-on: #636366;
+  --hatch: #48484a;
+  --bar-track: #2c2c2e;
   --bar-line: transparent;
-  --weekend: rgba(242, 240, 232, 0.022);
-  --overlay: rgba(4, 8, 7, 0.6);
-  --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --weekend: rgba(255, 255, 255, 0.025);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 
-  --font-ui: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
-  --r: 6px;
-  --r-3: 8px;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace;
+  --r: 10px;
+  --r-3: 14px;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --sidebar: 264px;
   color-scheme: dark;
 }
 
-/* Light: warm white paper with the same charcoal-green ink. */
+/* Light: Apple's light system palette, same structure. */
 :root[data-theme='light'] {
-  --bg: #f4f2ea;
+  --bg: #f2f2f7;
   --surface: #ffffff;
-  --surface-2: #ece9df;
-  --elev: #f7f5ee;
-  --ink: #0c1412;
-  --ink-2: #4b5852;
-  --line: #dcd8cb;
-  --line-2: #e9e6dc;
-  --line-strong: #c9c4b4;
-  --gold: #a8842a;
-  --gold-weak: rgba(168, 132, 42, 0.12);
-  --on-gold: #ffffff;
-  --accent: #2f8f74;
-  --accent-weak: rgba(47, 143, 116, 0.12);
+  --surface-2: #f9f9fb;
+  --elev: #e5e5ea;
+  --fill: rgba(118, 118, 128, 0.12);
+  --fill-strong: rgba(118, 118, 128, 0.2);
+  --ink: #000000;
+  --ink-2: #636366;
+  --line: #d1d1d6;
+  --line-2: #e5e5ea;
+  --line-strong: #c7c7cc;
+  --brand: #0071e3;
+  --brand-weak: rgba(0, 113, 227, 0.12);
+  --on-brand: #ffffff;
+  --link: #0066cc;
+  --accent: #248a3d;
+  --accent-weak: rgba(36, 138, 61, 0.12);
   --on-accent: #ffffff;
-  --warn: #b7860f;
-  --danger: #c2413f;
-  --danger-weak: rgba(194, 65, 63, 0.1);
-  --info: #2a6fd1;
-  --hatch: #c4c9c2;
-  --bar-track: #e6e8e1;
+  --warn: #b25000;
+  --danger: #d70015;
+  --danger-weak: rgba(215, 0, 21, 0.1);
+  --info: #0071a4;
+  --focus: #0071e3;
+  --monogram: #8e8e93;
+  --seg-on: #ffffff;
+  --hatch: #c7c7cc;
+  --bar-track: #e5e5ea;
   --bar-line: transparent;
-  --weekend: rgba(12, 20, 18, 0.03);
-  --overlay: rgba(12, 20, 18, 0.32);
-  --shadow: 0 12px 32px rgba(12, 20, 18, 0.14);
+  --weekend: rgba(0, 0, 0, 0.025);
+  --overlay: rgba(0, 0, 0, 0.3);
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
   color-scheme: light;
 }
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
+html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
   font: 14px/1.45 var(--font-ui);
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: 'tnum';
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
-button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
+button, input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-::selection { background: var(--gold); color: var(--on-gold); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+::selection { background: var(--brand); color: var(--on-brand); }
 
+/* Small uppercase labels, as the tracker's eyebrows and section labels. */
 .mono {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .muted { color: var(--ink-2); }
-.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* Buttons: quiet bordered by default, gold when primary. */
+/* Buttons: tinted fill by default, solid blue when primary. */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   height: 36px; padding: 0 14px;
-  border: 1px solid var(--line-strong); border-radius: var(--r);
-  background: var(--surface);
+  border: 0; border-radius: var(--r);
+  background: var(--fill); color: var(--ink);
   font-size: 13.5px; font-weight: 600;
   white-space: nowrap;
-  transition: background 120ms, border-color 120ms, color 120ms;
+  transition: background 120ms, color 120ms, filter 120ms;
 }
-.btn:hover { background: var(--elev); border-color: var(--ink-2); }
-.btn.primary { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
-.btn.primary:hover { filter: brightness(1.06); }
-.btn.ghost { border-color: transparent; background: transparent; color: var(--ink-2); }
-.btn.ghost:hover { color: var(--ink); background: var(--elev); }
-.btn.danger { color: var(--ink-2); background: transparent; }
-.btn.danger:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-weak); }
-.btn.danger.armed { background: var(--danger); color: var(--on-accent); }
+.btn:hover { background: var(--fill-strong); }
+.btn.primary { background: var(--brand); color: var(--on-brand); }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.ghost { background: transparent; color: var(--link); }
+.btn.ghost:hover { background: var(--fill); }
+.btn.danger { color: var(--danger); background: transparent; }
+.btn.danger:hover { background: var(--danger-weak); }
+.btn.danger.armed { background: var(--danger); color: #ffffff; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn.icon { width: 36px; padding: 0; }
 
-/* Toggle chips (My work, Hide done): mono, gold when on. */
+/* Toggle chips (My work, Hide done): pills, blue when on. */
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
   height: 36px; padding: 0 14px;
-  border: 1px solid var(--line-strong); border-radius: var(--r);
-  background: transparent; color: var(--ink);
-  font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  border: 0; border-radius: 999px;
+  background: var(--fill); color: var(--ink);
+  font-size: 12.5px; font-weight: 600;
   white-space: nowrap;
-  transition: background 120ms, border-color 120ms, color 120ms;
+  transition: background 120ms, color 120ms;
 }
-.chip:hover { border-color: var(--ink-2); }
-.chip[aria-pressed='true'] { border-color: var(--gold); color: var(--gold); background: var(--gold-weak); }
+.chip:hover { background: var(--fill-strong); }
+.chip[aria-pressed='true'] { background: var(--brand); color: var(--on-brand); }
 
-.seg { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--surface-2); }
+/* Segmented control, iOS style. */
+.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; background: var(--fill); }
 .seg > button {
-  height: 28px; padding: 0 12px; border: 0; border-radius: 4px;
-  background: transparent; color: var(--ink-2);
+  height: 30px; padding: 0 12px; border: 0; border-radius: 7px;
+  background: transparent; color: var(--ink);
   font-size: 12.5px; font-weight: 600; text-transform: capitalize;
 }
-.seg > button:hover { color: var(--ink); }
-.seg > button[aria-pressed='true'] { background: var(--elev); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.seg > button[aria-pressed='true'] { background: var(--seg-on); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); }
 
 .input, .select, .textarea {
   width: 100%; height: 36px; padding: 0 12px;
-  border: 1px solid var(--line-strong); border-radius: var(--r);
-  background: var(--surface);
+  border: 1px solid transparent; border-radius: var(--r);
+  background: var(--elev);
 }
-.input:hover, .select:hover, .textarea:hover { border-color: var(--ink-2); }
-.input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-weak); }
+.input::placeholder, .textarea::placeholder { color: var(--ink-2); }
+.input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-weak); }
 .textarea { height: auto; min-height: 96px; padding: 8px 12px; resize: vertical; line-height: 1.5; }
 .select {
   appearance: none; padding-right: 32px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16' fill='none' stroke='%239aa7a1' stroke-width='1.6'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a1a1a8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 12px center;
 }
-.select option, .select optgroup { background: var(--surface); color: var(--ink); }
+.select option, .select optgroup { background: var(--elev); color: var(--ink); }
 
-/* Monograms: rounded squares. "Me" is gold. */
+/* Monograms: circles, as iOS contact avatars. "Me" is blue. */
 .mg {
   display: inline-grid; place-items: center; flex: none;
   width: 26px; height: 26px;
-  border-radius: 7px;
-  background: #3d5a50; color: #eef3ef;
-  font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em;
+  border-radius: 50%;
+  background: var(--monogram); color: #ffffff;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em;
 }
-.mg.me { background: var(--gold); color: var(--on-gold); }
+.mg.me { background: var(--brand); color: var(--on-brand); }
 .mg.none { background: transparent; border: 1px dashed var(--hatch); color: var(--ink-2); }
-.mg.sm { width: 22px; height: 22px; font-size: 9.5px; border-radius: 6px; }
+.mg.sm { width: 22px; height: 22px; font-size: 9.5px; }
 
 .tag {
-  display: inline-flex; align-items: center; height: 18px; padding: 0 6px;
-  border-radius: 4px;
-  font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  display: inline-flex; align-items: center; height: 18px; padding: 0 7px;
+  border-radius: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
 }
 .tag.late { color: var(--danger); background: var(--danger-weak); }
-.tag.me { background: var(--gold); color: var(--on-gold); }
+.tag.me { background: var(--brand); color: var(--on-brand); }
 
 /* Remaining work is a quiet hatched track, done work is solid green. */
 .hatch {
@@ -189,19 +207,19 @@ button { cursor: pointer; }
 
 kbd {
   font-family: var(--font-mono); font-size: 10.5px;
-  padding: 2px 6px; border: 1px solid var(--line-strong); border-radius: 4px;
-  background: var(--surface-2); color: var(--ink-2);
+  padding: 2px 6px; border-radius: 5px;
+  background: var(--fill); color: var(--ink-2);
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
 }
 
-/* Wordmark: wide-tracked caps with a gold full stop. */
+/* Wordmark: wide-tracked caps with a blue full stop. */
 .wordmark { display: inline-flex; flex-direction: column; gap: 3px; line-height: 1; }
 .wordmarkName { font-weight: 600; font-size: 17px; letter-spacing: 0.32em; }
-.wordmarkName b { color: var(--gold); font-weight: 700; letter-spacing: 0; }
-.wordmarkTag { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-2); }
+.wordmarkName b { color: var(--brand); font-weight: 700; letter-spacing: 0; }
+.wordmarkTag { font-size: 9px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-2); }
 
 /* Bottom sheet (phones): menu, filter lists. */
 .sheetBackdrop {

@@ -27,7 +27,7 @@
   min-width: 30px; height: 26px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: 5px;
   background: var(--surface-2); font-family: var(--font-mono);
 }
-.link:hover { border-color: var(--gold); color: var(--gold); }
+.link:hover { border-color: var(--brand); color: var(--brand); }
 .load { width: 28%; min-width: 120px; }
 .loadBar { position: relative; height: 10px; border-radius: 5px; overflow: hidden; background-color: var(--bar-track); }
 .loadBar {

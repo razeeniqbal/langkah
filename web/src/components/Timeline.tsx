@@ -339,8 +339,8 @@ export function Timeline({ d }: { d: Data }) {
               </defs>
               <Grid d0={d0} d1={d1} x={x} ppd={ppd} zoom={zoom} H={H} sheet={sheet} rows={rows} ROW={ROW} />
               {/* today: highlighter band with a hairline */}
-              <rect x={x(today) + ppd / 2 - scaleW / 2} y={0} width={scaleW} height={H} fill="var(--gold)" opacity={0.06} />
-              <line x1={x(today) + ppd / 2} x2={x(today) + ppd / 2} y1={0} y2={H} stroke="var(--gold)" strokeWidth={1.25} strokeDasharray="4 4" />
+              <rect x={x(today) + ppd / 2 - scaleW / 2} y={0} width={scaleW} height={H} fill="var(--brand)" opacity={0.06} />
+              <line x1={x(today) + ppd / 2} x2={x(today) + ppd / 2} y1={0} y2={H} stroke="var(--brand)" strokeWidth={1.25} strokeDasharray="4 4" />
 
               {rows.map((r, idx) => {
                 const y = idx * ROW
@@ -561,7 +561,7 @@ function Scale({ d0, d1, x, ppd, zoom, today, sheet }: {
       {top}
       {bottom}
       <g>
-        <rect x={tx - 24} y={27} width={48} height={15} rx={4} fill="var(--gold)" />
+        <rect x={tx - 24} y={27} width={48} height={15} rx={4} fill="var(--brand)" />
         <text x={tx} y={37.5} textAnchor="middle" className={s.todayText}>Today</text>
       </g>
       <line x1={0} x2="100%" y1={HEAD - 0.5} y2={HEAD - 0.5} stroke="var(--line-strong)" />
@@ -610,7 +610,7 @@ function SummaryBar({ x1, x2, y, ROW, progress, strong, stack }: {
   return (
     <g>
       <rect x={x1} y={by} width={w} height={h} rx={h / 2} fill="var(--bar-track)" />
-      <rect x={x1} y={by} width={w} height={h} rx={h / 2} fill="var(--gold)" className={s.fill}
+      <rect x={x1} y={by} width={w} height={h} rx={h / 2} fill="var(--brand)" className={s.fill}
         style={{ transform: `scaleX(${progress / 100})`, transformOrigin: `${x1}px 0` }} />
     </g>
   )
@@ -662,7 +662,7 @@ function ItemBar({ item, y, ROW, x, ppd, start, end, progress, behind, knob, dra
         <g className={s.knob} onPointerDown={(e) => onBegin(e, 'knob')}>
           <title>{knob}</title>
           <rect x={kx - 7} y={by + bh - 2} width={14} height={10} fill="transparent" />
-          <path d={`M${kx} ${by + bh - 1} l4.5 6 h-9 z`} fill="var(--gold)" />
+          <path d={`M${kx} ${by + bh - 1} l4.5 6 h-9 z`} fill="var(--brand)" />
         </g>
       )}
       {markers.map((m) => (

@@ -178,6 +178,8 @@ The rebuild should look like an engineer's planning sheet with real interaction 
 
 **Type and colour tokens (starting point)**
 
+> Superseded: Langkah now shares the course tracker's iOS-style theme. The current tokens are in `web/src/styles/global.css` and the design rules in `CLAUDE.md`.
+
 | Token | Light | Dark | Use |
 |---|---|---|---|
 | bg | #edefea | #141715 | Page |

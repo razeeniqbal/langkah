@@ -232,7 +232,14 @@ export function usePeopleOps() {
 
 export interface AuthStatus {
   required: boolean; ok: boolean; role: 'edit' | 'view' | null; viewOnly: boolean
-  idleMinutes: number; loginEachLoad: boolean
+  password: boolean; idleMinutes: number; loginEachLoad: boolean
+  /** Portfolio single sign-on, when the server has MBR_SSO_SECRET. */
+  sso: { login: string; logout: string; active: boolean } | null
+}
+
+/** Send the browser to the portfolio's sign-in (or sign-out) and back to this page. */
+export function ssoRedirect(url: string) {
+  window.location.assign(`${url}?next=${encodeURIComponent(window.location.origin + '/')}`)
 }
 
 /** Reads the session from the server and mirrors it in the UI store. */
@@ -247,7 +254,10 @@ export async function loadSession() {
 
 /** Drop the session and go back to the sign-in screen. */
 export async function signOut(reason: string | null = null) {
+  const st = await api.get<AuthStatus>('/auth/status').catch(() => null)
   await api.post('/auth/logout').catch(() => {})
+  // Signed in through the portfolio: sign out there, which ends every app's session.
+  if (st?.sso?.active) return ssoRedirect(st.sso.logout)
   queryClient.clear()
   useUI.getState().set({ authNeeded: true, editor: null, palette: false, signedOutReason: reason })
 }

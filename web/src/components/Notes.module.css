@@ -22,7 +22,7 @@
   flex: 1; min-width: 0; padding: 6px 0; border: 0; background: none; text-align: left;
   font-size: 14px; line-height: 1.4; overflow-wrap: anywhere;
 }
-.text:hover { color: var(--gold); }
+.text:hover { color: var(--brand); }
 .edit { flex: 1; min-width: 0; }
 .project { width: 118px; font-family: var(--font-mono); font-size: 11px; }
 .date { font-size: 11px; width: 52px; text-align: right; }
