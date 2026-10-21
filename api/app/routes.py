@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session
@@ -316,6 +318,40 @@ def _summary(db: Session, project_id: str | None) -> Summary:
 @router.get("/summary", response_model=Summary)
 def summary(db: Session = DB):
     return _summary(db, None)
+
+
+@router.get("/digest")
+def digest(today: date | None = None, db: Session = DB):
+    """At-a-glance numbers for the portfolio admin hub. `today` is the caller's local date (late and
+    due-soon depend on it); the server's date is the fallback."""
+    today = today or date.today()
+    week_end = today + timedelta(days=7)
+    projects = [p for p in db.scalars(select(Project).order_by(Project.order)) if not p.archived]
+    live = {p.id for p in projects}
+    cards = [c for c in db.scalars(select(Card)) if c.project_id in live]
+    open_cards = [c for c in cards if c.status != "done"]
+    late = sorted((c for c in open_cards if c.due and c.due < today), key=lambda c: c.due)
+    soon = sorted((c for c in open_cards if c.due and today <= c.due <= week_end), key=lambda c: c.due)
+    progress = {r.project_id: r.progress for r in _summary(db, None).projects}
+    # Same card set as `projects` and `cards` below: archived projects drop out of the overall figure too.
+    overall = db.scalar(text(
+        f"SELECT {CARD_PROGRESS_SQL} FROM {P}cards c JOIN {P}projects p ON p.id = c.project_id "
+        f"WHERE NOT p.archived"))
+    code = {p.id: p.code for p in projects}
+    card = lambda c: {"title": c.title, "project": code[c.project_id], "due": c.due.isoformat(), "status": c.status}  # noqa: E731
+    return {
+        "overall": round(float(overall or 0), 1),
+        "projects": [
+            {"code": p.code, "name": p.name, "progress": progress.get(p.id, 0.0),
+             "open": sum(c.project_id == p.id for c in open_cards),
+             "late": sum(c.project_id == p.id for c in late)}
+            for p in projects
+        ],
+        "cards": {s: sum(c.status == s for c in cards) for s in ("backlog", "todo", "doing", "review", "done")},
+        "lateCount": len(late),
+        "dueThisWeek": len(soon),
+        "attention": [card(c) for c in (late + soon)[:4]],
+    }
 
 
 @router.get("/projects/{id}/summary", response_model=Summary)
