@@ -332,12 +332,15 @@ def digest(today: date | None = None, db: Session = DB):
     open_cards = [c for c in cards if c.status != "done"]
     late = sorted((c for c in open_cards if c.due and c.due < today), key=lambda c: c.due)
     soon = sorted((c for c in open_cards if c.due and today <= c.due <= week_end), key=lambda c: c.due)
-    summary_ = _summary(db, None)
-    progress = {r.project_id: r.progress for r in summary_.projects}
+    progress = {r.project_id: r.progress for r in _summary(db, None).projects}
+    # Same card set as `projects` and `cards` below: archived projects drop out of the overall figure too.
+    overall = db.scalar(text(
+        f"SELECT {CARD_PROGRESS_SQL} FROM {P}cards c JOIN {P}projects p ON p.id = c.project_id "
+        f"WHERE NOT p.archived"))
     code = {p.id: p.code for p in projects}
     card = lambda c: {"title": c.title, "project": code[c.project_id], "due": c.due.isoformat(), "status": c.status}  # noqa: E731
     return {
-        "overall": summary_.overall,
+        "overall": round(float(overall or 0), 1),
         "projects": [
             {"code": p.code, "name": p.name, "progress": progress.get(p.id, 0.0),
              "open": sum(c.project_id == p.id for c in open_cards),

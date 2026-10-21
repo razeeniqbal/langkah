@@ -362,5 +362,16 @@ def test_digest_for_the_portfolio_admin(c):
     assert d["projects"] == [{"code": "DIC", "name": "DIC Abandonment", "progress": d["overall"], "open": 3, "late": 1}]
 
 
+def test_digest_leaves_out_archived_projects(c):
+    live = mk_project(c, code="LIV", name="Live")
+    old = mk_project(c, code="OLD", name="Old")
+    mk_card(c, projectId=live["id"], status="todo", due="2026-10-01")
+    mk_card(c, projectId=old["id"], status="done")
+    assert c.patch(f"/api/projects/{old['id']}", json={"archived": True}).status_code == 200
+    d = c.get("/api/digest", params={"today": "2026-10-21"}).json()
+    assert [p["code"] for p in d["projects"]] == ["LIV"]
+    assert d["overall"] == 0.0 and d["cards"]["done"] == 0 and d["lateCount"] == 1
+
+
 def test_digest_needs_sign_in(locked):
     assert locked.get("/api/digest").status_code == 401
